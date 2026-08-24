@@ -2,6 +2,8 @@
 
 **Build-time OpenAPI 3.0/3.1 → gRPC + Protobuf generator for Java (JDK 25 LTS).**
 
+![JavaPortico](docs/assets/JavaPortico.jpg)
+
 JavaPortico is the Java sibling of [SharpPortico](https://github.com/MPCoreDeveloper/SharpPortico). A Maven plugin
 turns OpenAPI specifications (YAML or JSON) into production-quality protobuf messages, gRPC service stubs and an
 optional **gRPC↔REST proxy** (`{Service}Proxy`) that forwards gRPC calls to a legacy REST API (X-Api-Key outbound,
