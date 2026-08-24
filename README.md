@@ -2,6 +2,8 @@
 
 **Build-time OpenAPI 3.0/3.1 → gRPC + Protobuf generator for Java (JDK 25 LTS).**
 
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4)](https://github.com/sponsors/MPCoreDeveloper)
+
 ![JavaPortico](docs/assets/JavaPortico.jpg)
 
 JavaPortico is the Java sibling of [SharpPortico](https://github.com/MPCoreDeveloper/SharpPortico). A Maven plugin
