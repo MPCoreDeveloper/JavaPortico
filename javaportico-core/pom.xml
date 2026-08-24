@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.mpcoredeveloper</groupId>
+    <artifactId>javaportico-parent</artifactId>
+    <version>0.1.0</version>
+  </parent>
+
+  <artifactId>javaportico-core</artifactId>
+  <name>JavaPortico :: Core</name>
+  <description>OpenAPI 3.0/3.1 parser, schema mapper, IR and emitters (proto + gRPC proxy).</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.swagger.parser.v3</groupId>
+      <artifactId>swagger-parser</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.mpcoredeveloper</groupId>
+      <artifactId>javaportico-annotations</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.github.mpcoredeveloper</groupId>
+  <artifactId>javaportico-parent</artifactId>
+  <version>0.1.0</version>
+  <packaging>pom</packaging>
+
+  <name>JavaPortico</name>
+  <description>Build-time OpenAPI 3.0/3.1 -> gRPC + protobuf generator and gRPC -> REST proxy runtime for Java.</description>
+  <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>MPCoreDeveloper</name>
+      <organization>MPCoreDeveloper</organization>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/MPCoreDeveloper/JavaPortico.git</connection>
+    <developerConnection>scm:git:git@github.com:MPCoreDeveloper/JavaPortico.git</developerConnection>
+    <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
+    </snapshotRepository>
+    <repository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
+  <modules>
+    <module>javaportico-annotations</module>
+    <module>javaportico-core</module>
+    <module>javaportico-maven-plugin</module>
+    <module>javaportico-runtime</module>
+    <module>javaportico-cli</module>
+    <module>samples/grpc-server-example</module>
+    <module>samples/legacy-proxy-example</module>
+    <module>samples/spring-boot-example</module>
+    <module>tests/javaportico-tests</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <maven.compiler.release>25</maven.compiler.release>
+    <maven.compiler.parameters>true</maven.compiler.parameters>
+
+    <!-- JavaPortico -->
+    <javaportico.version>0.1.0</javaportico.version>
+
+    <!-- Dependencies -->
+    <version.swagger.parser>2.1.24</version.swagger.parser>
+    <version.protobuf>3.25.5</version.protobuf>
+    <version.grpc>1.68.1</version.grpc>
+    <version.jackson>2.18.2</version.jackson>
+    <version.caffeine>3.1.8</version.caffeine>
+    <version.picocli>4.7.6</version.picocli>
+    <version.slf4j>2.0.16</version.slf4j>
+    <version.junit>5.11.3</version.junit>
+    <version.maven.plugin.api>3.9.9</version.maven.plugin.api>
+    <version.maven.plugin.annotations>3.15.1</version.maven.plugin.annotations>
+    <version.maven.plugin.plugin>3.15.2</version.maven.plugin.plugin>
+
+    <!-- Plugins -->
+    <version.compiler.plugin>3.13.0</version.compiler.plugin>
+    <version.surefire.plugin>3.2.5</version.surefire.plugin>
+    <version.shade.plugin>3.6.0</version.shade.plugin>
+    <version.os.maven.plugin>1.7.1</version.os.maven.plugin>
+    <version.protobuf.maven.plugin>0.6.1</version.protobuf.maven.plugin>
+    <version.gpg.plugin>3.2.7</version.gpg.plugin>
+    <version.source.plugin>3.3.1</version.source.plugin>
+    <version.javadoc.plugin>3.11.2</version.javadoc.plugin>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- JavaPortico modules -->
+      <dependency>
+        <groupId>io.github.mpcoredeveloper</groupId>
+        <artifactId>javaportico-annotations</artifactId>
+        <version>${javaportico.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.mpcoredeveloper</groupId>
+        <artifactId>javaportico-core</artifactId>
+        <version>${javaportico.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.mpcoredeveloper</groupId>
+        <artifactId>javaportico-runtime</artifactId>
+        <version>${javaportico.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.mpcoredeveloper</groupId>
+        <artifactId>javaportico-maven-plugin</artifactId>
+        <version>${javaportico.version}</version>
+      </dependency>
+
+      <!-- OpenAPI parsing -->
+      <dependency>
+        <groupId>io.swagger.parser.v3</groupId>
+        <artifactId>swagger-parser</artifactId>
+        <version>${version.swagger.parser}</version>
+      </dependency>
+
+      <!-- protobuf / gRPC -->
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>${version.protobuf}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java-util</artifactId>
+        <version>${version.protobuf}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-api</artifactId>
+        <version>${version.grpc}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-stub</artifactId>
+        <version>${version.grpc}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-protobuf</artifactId>
+        <version>${version.grpc}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-netty-shaded</artifactId>
+        <version>${version.grpc}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-services</artifactId>
+        <version>${version.grpc}</version>
+      </dependency>
+
+      <!-- JSON / cache / logging / CLI -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${version.jackson}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>${version.caffeine}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${version.slf4j}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.annotation</groupId>
+        <artifactId>javax.annotation-api</artifactId>
+        <version>1.3.2</version>
+      </dependency>
+      <dependency>
+        <groupId>info.picocli</groupId>
+        <artifactId>picocli</artifactId>
+        <version>${version.picocli}</version>
+      </dependency>
+
+      <!-- Maven plugin -->
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-plugin-api</artifactId>
+        <version>${version.maven.plugin.api}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-core</artifactId>
+        <version>${version.maven.plugin.api}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.plugin-tools</groupId>
+        <artifactId>maven-plugin-annotations</artifactId>
+        <version>${version.maven.plugin.annotations}</version>
+      </dependency>
+
+      <!-- Testing -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${version.junit}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${version.compiler.plugin}</version>
+          <configuration>
+            <release>${maven.compiler.release}</release>
+            <parameters>${maven.compiler.parameters}</parameters>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${version.surefire.plugin}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>${version.shade.plugin}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-plugin-plugin</artifactId>
+          <version>${version.maven.plugin.plugin}</version>
+        </plugin>
+        <plugin>
+          <groupId>kr.motd.maven</groupId>
+          <artifactId>os-maven-plugin</artifactId>
+          <version>${version.os.maven.plugin}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.xolstice.maven.plugins</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${version.protobuf.maven.plugin}</version>
+        </plugin>
+        <plugin>
+          <groupId>io.github.mpcoredeveloper</groupId>
+          <artifactId>javaportico-maven-plugin</artifactId>
+          <version>${javaportico.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>${version.source.plugin}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${version.javadoc.plugin}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>${version.gpg.plugin}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <!--
+      Release profile for Maven Central publishing (via OSSRH):
+        mvn -Prelease clean deploy
+      Requires ~/.m2/settings.xml with an <id>ossrh</id> server entry (username/password)
+      and a GPG key configured (see .github/workflows/publish.yml for the CI equivalent).
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <doclint>none</doclint>
+              <quiet>true</quiet>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
+
