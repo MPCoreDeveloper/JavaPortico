@@ -56,9 +56,9 @@ Declare the spec in your `pom.xml`, then run protoc via `protobuf-maven-plugin`:
       <artifactId>protobuf-maven-plugin</artifactId>
       <version>0.6.1</version>
       <configuration>
-        <protocArtifact>com.google.protobuf:protoc:3.25.5:exe:${os.detected.classifier}</protocArtifact>
+        <protocArtifact>com.google.protobuf:protoc:4.36.0:exe:${os.detected.classifier}</protocArtifact>
         <pluginId>grpc-java</pluginId>
-        <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.68.1:exe:${os.detected.classifier}</pluginArtifact>
+        <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.83.1:exe:${os.detected.classifier}</pluginArtifact>
         <protoSourceRoot>${project.build.directory}/generated-sources/protobuf</protoSourceRoot>
       </configuration>
       <executions>

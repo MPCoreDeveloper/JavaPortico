@@ -18,7 +18,7 @@
   <!-- Spring Framework 6.2.x bundles an ASM that reads up to JDK 24 class files;
        this module therefore compiles at release 21 while the rest of JavaPortico stays on JDK 25. -->
   <properties>
-    <version.spring.boot>3.5.3</version.spring.boot>
+    <version.spring.boot>3.5.16</version.spring.boot>
     <maven.compiler.release>21</maven.compiler.release>
   </properties>
 
@@ -61,6 +61,22 @@
         <version>${version.spring.boot}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- Explicit Jackson alignment (overrides the Spring Boot BOM) so every module resolves the patched release. -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${version.jackson}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${version.jackson}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>2.22</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
