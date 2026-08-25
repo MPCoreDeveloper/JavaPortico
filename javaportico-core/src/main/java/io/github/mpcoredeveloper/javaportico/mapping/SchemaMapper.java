@@ -61,7 +61,12 @@ public final class SchemaMapper {
                 String rawName;
                 Integer rawNum = null;
                 if (value instanceof Number n) {
-                    rawNum = n.intValue();
+                    long wide = n.longValue();
+                    if (wide < Integer.MIN_VALUE || wide > Integer.MAX_VALUE) {
+                        throw new IllegalArgumentException("Enum value " + n + " for '" + name
+                                + "' exceeds the int32 range supported by protobuf enums: " + wide);
+                    }
+                    rawNum = (int) wide;
                     rawName = n.toString();
                 } else if (value instanceof String s) {
                     rawName = s;

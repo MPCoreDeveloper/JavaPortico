@@ -4,6 +4,8 @@
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4)](https://github.com/sponsors/MPCoreDeveloper)
 
+See [CHANGELOG.md](CHANGELOG.md) for the full history of changes.
+
 ![JavaPortico](docs/assets/JavaPortico.jpg)
 
 JavaPortico is the Java sibling of [SharpPortico](https://github.com/MPCoreDeveloper/SharpPortico). A Maven plugin

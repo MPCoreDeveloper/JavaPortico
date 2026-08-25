@@ -53,6 +53,14 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter(defaultValue = "false", property = "javaportico.skip")
     private boolean skip;
 
+    /** Validates a configured Java package (namespace) before it becomes a file-system path. */
+    private static final java.util.regex.Pattern JAVA_PACKAGE =
+            java.util.regex.Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*");
+
+    /** Validates a service name used in generated file names. */
+    private static final java.util.regex.Pattern JAVA_IDENTIFIER =
+            java.util.regex.Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
@@ -129,6 +137,17 @@ public class GenerateMojo extends AbstractMojo {
         }
 
         if (options.isEnableProxyGeneration()) {
+            // Path-traversal guard: the namespace and service name flow into the output file path
+            // (`new File(javaOutputDirectory, ns.replace('.', '/') + "/" + serviceName + "Proxy.java")`).
+            // A crafted value such as `../../../tmp/x`, an absolute path, or a `/`-separated segment
+            // would otherwise resolve outside the configured output directory.
+            String ns = model.namespace();
+            String svc = model.serviceName();
+            if (!JAVA_PACKAGE.matcher(ns).matches() || !JAVA_IDENTIFIER.matcher(svc).matches()) {
+                getLog().error("JavaPortico: refusing to generate proxy source: namespace '" + ns
+                        + "' and/or service name '" + svc + "' is not a valid Java package/identifier (path traversal guard).");
+                return;
+            }
             String java = ProxyJavaEmitter.emit(model, item);
             File out = new File(javaOutputDirectory,
                     model.namespace().replace('.', '/') + "/" + model.serviceName() + "Proxy.java");

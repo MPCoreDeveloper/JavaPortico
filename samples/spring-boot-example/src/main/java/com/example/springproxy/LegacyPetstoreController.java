@@ -2,6 +2,8 @@ package com.example.springproxy;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +24,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @RequestMapping("/pets")
 public class LegacyPetstoreController {
 
+    private static final Logger log = LoggerFactory.getLogger(LegacyPetstoreController.class);
+
     public static final String LEGACY_KEY = "legacy-secret-key";
 
     private final List<Map<String, Object>> pets = new CopyOnWriteArrayList<>();
@@ -40,6 +44,7 @@ public class LegacyPetstoreController {
     @GetMapping
     public ResponseEntity<?> list(HttpServletRequest request) {
         if (!LEGACY_KEY.equals(request.getHeader("X-Api-Key"))) {
+            log.warn("Rejected {} {} without a valid X-Api-Key", request.getMethod(), request.getRequestURI());
             return ResponseEntity.status(401).build();
         }
         counter.increment();
@@ -49,6 +54,7 @@ public class LegacyPetstoreController {
     @GetMapping("/{petId}")
     public ResponseEntity<?> get(@PathVariable long petId, HttpServletRequest request) {
         if (!LEGACY_KEY.equals(request.getHeader("X-Api-Key"))) {
+            log.warn("Rejected {} {} without a valid X-Api-Key", request.getMethod(), request.getRequestURI());
             return ResponseEntity.status(401).build();
         }
         counter.increment();
@@ -62,6 +68,7 @@ public class LegacyPetstoreController {
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Map<String, Object> pet, HttpServletRequest request) {
         if (!LEGACY_KEY.equals(request.getHeader("X-Api-Key"))) {
+            log.warn("Rejected {} {} without a valid X-Api-Key", request.getMethod(), request.getRequestURI());
             return ResponseEntity.status(401).build();
         }
         counter.increment();

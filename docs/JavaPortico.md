@@ -131,6 +131,9 @@ Server server = ServerBuilder.forPort(50053)
   `OWN` (validate a ULID-shaped key `x-portico-key`, use the configured outbound key).
 - **Keys never hardcoded**: `IKeyProvider` (config / delegate / composite).
 - **Audit**: `ProxyAuditEnabled` (or inject `IProxyAuditLogger`).
+- **HTTP client lifecycle**: `HttpRestClient` implements `AutoCloseable` — close it (or let a DI
+  container manage it) to release the `HttpClient` connection/thread pools. Responses larger than
+  64 MiB are rejected; use `new HttpRestClient(http, baseUrl, maxBytes)` to override the limit.
 - **Metadata bridge**: grpc-java does not expose request headers to `ImplBase` handlers, so the
   host must wrap the service with `ProxyMetadataInterceptor` (as above).
 

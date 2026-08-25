@@ -63,21 +63,35 @@ public final class UlidClientKeyValidator implements IClientKeyValidator {
         for (int i = 0; i < prefix.length(); i++) {
             int digit = decodeBase32(prefix.charAt(i));
             if (digit < 0) return null;
+            // A valid ULID's first character encodes only 3 bits (values 0-7).
+            if (i == 0 && digit > 7) return null;
             value = (value << 5) | (long) digit;
         }
-        long millis = value >> 8;
-        return millis >= 0 ? millis : null;
+        // ULID: the first 10 characters encode the 48-bit millisecond timestamp.
+        // Ten Crockford base32 characters hold 50 bits, and the top 2 bits of a
+        // valid ULID timestamp are always 0, so the timestamp is the low 48 bits
+        // of the accumulated value. (A previous `>> 8` dropped 8 real timestamp
+        // bits, making describe() report a time ~256x too small.)
+        return value & 0xFFFF_FFFF_FFFFL;
     }
 
     private static int decodeBase32(char c) {
         if (c >= '0' && c <= '9') return c - '0';
-        if (c >= 'A' && c <= 'Z') {
-            return switch (c) {
-                case 'I', 'L', 'O', 'U' -> -1;
-                default -> c - 'A' + 10;
-            };
-        }
-        if (c >= 'a' && c <= 'z') return decodeBase32(Character.toUpperCase(c));
-        return -1;
+        if (c >= 'a' && c <= 'z') c = Character.toUpperCase(c);
+        if (c < 'A' || c > 'Z') return -1;
+        return switch (c) {
+            case 'I', 'L', 'O', 'U' -> -1;
+            default -> {
+                int v = c - 'A' + 10;
+                // Crockford's base32 omits I, L, O and U from its alphabet, so every
+                // letter after an omitted one maps to a value one less than its
+                // contiguous A-Z position (e.g. J=18, M=20, R=24, Z=31).
+                if (c > 'H') v -= 1; // skip I
+                if (c > 'L') v -= 1; // skip L
+                if (c > 'O') v -= 1; // skip O
+                if (c > 'U') v -= 1; // skip U
+                yield v;
+            }
+        };
     }
 }

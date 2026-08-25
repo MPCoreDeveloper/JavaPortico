@@ -58,6 +58,36 @@ public final class ProxyJavaEmitter {
         return w.toString();
     }
 
+    /**
+     * Escapes a raw string so it is safe inside a double-quoted Java string literal.
+     * OpenAPI-derived values (paths, parameter names, enum raw values) are embedded
+     * into generated source; without escaping, a {@code "} or {@code \} in the spec
+     * would break the literal boundary and allow injection of arbitrary source code
+     * into the emitted proxy class.
+     */
+    public static String javaStringLiteral(String raw) {
+        if (raw == null) return "";
+        StringBuilder sb = new StringBuilder(raw.length() + 8);
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '"' -> sb.append("\\\"");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
+    }
+
     private static void emitImports(CodeWriter w) {
         w.line("import com.fasterxml.jackson.databind.JsonNode;");
         w.line("import com.fasterxml.jackson.databind.ObjectMapper;");
@@ -175,7 +205,7 @@ public final class ProxyJavaEmitter {
                 w.closeBlock();
             });
             w.line();
-            w.line("String path = \"" + rpc.originalPath() + "\";");
+            w.line("String path = \"" + javaStringLiteral(rpc.originalPath()) + "\";");
             w.line("Map<String, String> pathParams = new LinkedHashMap<>();");
             w.line("Map<String, String> queryParams = new LinkedHashMap<>();");
             w.line("Map<String, String> headersMap = new LinkedHashMap<>();");
@@ -186,8 +216,8 @@ public final class ProxyJavaEmitter {
                 for (FieldModel f : reqMsg.fields()) {
                     if (f.name().startsWith("_") || f.kind() == FieldKind.MESSAGE) continue;
                     w.block("if (" + isSetExpr(f) + ")", () -> {
-                        w.line("pathParams.put(\"" + f.name() + "\", " + toStr(f) + ");");
-                        w.line("queryParams.put(\"" + f.originalName() + "\", " + toStr(f) + ");");
+                        w.line("pathParams.put(\"" + javaStringLiteral(f.name()) + "\", " + toStr(f) + ");");
+                        w.line("queryParams.put(\"" + javaStringLiteral(f.originalName()) + "\", " + toStr(f) + ");");
                     });
                 }
             }
@@ -517,7 +547,7 @@ public final class ProxyJavaEmitter {
                             boolean first = true;
                             for (io.github.mpcoredeveloper.javaportico.model.EnumValueModel ev : enumModel.values()) {
                                 String cond = first ? "if" : "else if";
-                                w.line(cond + " (s.equalsIgnoreCase(\"" + ev.rawName() + "\")) { " + add + "(" + f.typeName() + "." + NameSanitizer.toProtoEnumName(ev.name()) + "); }");
+                                w.line(cond + " (s.equalsIgnoreCase(\"" + javaStringLiteral(ev.rawName()) + "\")) { " + add + "(" + f.typeName() + "." + NameSanitizer.toProtoEnumName(ev.name()) + "); }");
                                 first = false;
                             }
                             w.closeBlock();
@@ -537,7 +567,7 @@ public final class ProxyJavaEmitter {
                             boolean first = true;
                             for (io.github.mpcoredeveloper.javaportico.model.EnumValueModel ev : enumModel.values()) {
                                 String cond = first ? "if" : "else if";
-                                w.line(cond + " (s.equalsIgnoreCase(\"" + ev.rawName() + "\")) { " + set + "(" + f.typeName() + "." + NameSanitizer.toProtoEnumName(ev.name()) + "); }");
+                                w.line(cond + " (s.equalsIgnoreCase(\"" + javaStringLiteral(ev.rawName()) + "\")) { " + set + "(" + f.typeName() + "." + NameSanitizer.toProtoEnumName(ev.name()) + "); }");
                                 first = false;
                             }
                             w.closeBlock();

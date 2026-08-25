@@ -14,6 +14,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -43,6 +44,15 @@ class ProxyEmitTest {
         assertTrue(proxy.contains("s.equalsIgnoreCase(\"available\")"));
         // Metadata interop.
         assertTrue(proxy.contains("ProxyContext.REQUEST_METADATA.get()"));
+    }
+
+    @Test
+    void javaStringLiteralEscapesSpecDerivedValues() {
+        assertEquals("plain", ProxyJavaEmitter.javaStringLiteral("plain"));
+        assertEquals("a\\\"b", ProxyJavaEmitter.javaStringLiteral("a\"b"));
+        assertEquals("a\\\\b", ProxyJavaEmitter.javaStringLiteral("a\\b"));
+        assertEquals("a\\nb", ProxyJavaEmitter.javaStringLiteral("a\nb"));
+        assertEquals("", ProxyJavaEmitter.javaStringLiteral(null));
     }
 
     private static GrpcModel petstore() {

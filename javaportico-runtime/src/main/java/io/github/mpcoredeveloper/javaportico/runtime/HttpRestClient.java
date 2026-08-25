@@ -1,5 +1,6 @@
 package io.github.mpcoredeveloper.javaportico.runtime;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -12,20 +13,40 @@ import java.util.Map;
  * (case-insensitively), appends query parameters, sets headers and dispatches the request.
  * Ported from SharpPortico's {@code HttpRestClient}.
  */
-public final class HttpRestClient implements IRestClient {
+public final class HttpRestClient implements IRestClient, AutoCloseable {
+
+    /** Default cap on a single response body (64 MiB) to avoid unbounded heap growth. */
+    private static final int DEFAULT_MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
 
     private final HttpClient http;
+    private final boolean ownsHttpClient;
     private final String baseUrl;
+    private final int maxResponseBytes;
 
     public HttpRestClient(HttpClient http, String baseUrl) {
+        this(http, baseUrl, DEFAULT_MAX_RESPONSE_BYTES);
+    }
+
+    public HttpRestClient(HttpClient http, String baseUrl, int maxResponseBytes) {
+        this.ownsHttpClient = http == null;
         this.http = http != null ? http : HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
         this.baseUrl = (baseUrl == null ? "" : baseUrl).replaceAll("/+$", "");
+        this.maxResponseBytes = Math.max(1, maxResponseBytes);
     }
 
     public HttpRestClient(String baseUrl) {
-        this(null, baseUrl);
+        this(null, baseUrl, DEFAULT_MAX_RESPONSE_BYTES);
+    }
+
+    /**
+     * Releases the {@link HttpClient} connection/thread pools, but only when this instance
+     * created the client internally (the two-argument constructor keeps caller-owned clients open).
+     */
+    @Override
+    public void close() {
+        if (ownsHttpClient) http.close();
     }
 
     @Override
@@ -42,9 +63,15 @@ public final class HttpRestClient implements IRestClient {
             rb.header(e.getKey(), e.getValue());
         }
         try {
-            HttpResponse<byte[]> resp = http.send(rb.build(), HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<InputStream> resp = http.send(rb.build(), HttpResponse.BodyHandlers.ofInputStream());
             String ct = resp.headers().firstValue("Content-Type").orElse("application/json");
-            return new RestResponse(resp.statusCode(), resp.body(), ct);
+            try (InputStream in = resp.body()) {
+                byte[] body = in.readNBytes(maxResponseBytes + 1);
+                if (body.length > maxResponseBytes) {
+                    throw new RestException("response body exceeds the " + maxResponseBytes + " byte limit");
+                }
+                return new RestResponse(resp.statusCode(), body, ct);
+            }
         } catch (java.io.IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RestException(e);

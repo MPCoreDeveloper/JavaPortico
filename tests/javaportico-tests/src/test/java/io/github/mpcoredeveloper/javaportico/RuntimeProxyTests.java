@@ -43,6 +43,15 @@ class RuntimeProxyTests {
     }
 
     @Test
+    void ulidDescribeReportsAccurateIssuedTimestamp() {
+        String key = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+        UlidClientKeyValidator validator = new UlidClientKeyValidator(List.of(key));
+        // The first 10 chars decode to the 48-bit ULID timestamp 1469922850259 ms
+        // (2016-07-30T23:54:10.259Z); a previous `>> 8` shift made this ~256x too small.
+        assertEquals("ulid:2016-07-30T23:54:10.259Z", validator.describe(key));
+    }
+
+    @Test
     void statusMapperMapsHttpCodes() {
         assertEquals(Status.Code.INTERNAL, GrpcStatusMapper.toStatus(500, "boom").getCode());
         assertEquals(Status.Code.INTERNAL, GrpcStatusMapper.toStatus(503, "down").getCode());
@@ -78,19 +87,19 @@ class RuntimeProxyTests {
         server.start();
         try {
             int port = server.getAddress().getPort();
-            HttpRestClient client = new HttpRestClient("http://localhost:" + port);
+            try (HttpRestClient client = new HttpRestClient("http://localhost:" + port)) {
+                RestRequest request = new RestRequest("GET", "/pets/{petId}",
+                        Map.of("PetId", "42"),
+                        Map.of("petId", "42"),
+                        Map.of("X-Api-Key", "secret"),
+                        null, "application/json");
 
-            RestRequest request = new RestRequest("GET", "/pets/{petId}",
-                    Map.of("PetId", "42"),
-                    Map.of("petId", "42"),
-                    Map.of("X-Api-Key", "secret"),
-                    null, "application/json");
-
-            RestResponse resp = client.send(request);
-            assertEquals(200, resp.getStatusCode());
-            assertEquals("{\"ok\":true}", new String(resp.getBody(), StandardCharsets.UTF_8));
-            assertTrue(capturedUri.get().startsWith("/pets/42?petId=42"));
-            assertEquals("secret", capturedHeader.get());
+                RestResponse resp = client.send(request);
+                assertEquals(200, resp.getStatusCode());
+                assertEquals("{\"ok\":true}", new String(resp.getBody(), StandardCharsets.UTF_8));
+                assertTrue(capturedUri.get().startsWith("/pets/42?petId=42"));
+                assertEquals("secret", capturedHeader.get());
+            }
         } finally {
             server.stop(0);
         }

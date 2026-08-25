@@ -11,20 +11,28 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Mock legacy REST petstore (X-Api-Key checked, call counter). Serves plain JSON.
  */
 public final class LegacyRestServer {
 
+    private static final Logger log = LoggerFactory.getLogger(LegacyRestServer.class);
+
     public static final String LEGACY_KEY = "legacy-secret-key";
 
+    /** Rejects POST bodies above 1 MiB so a hostile client cannot exhaust heap. */
+    private static final int MAX_BODY_BYTES = 1024 * 1024;
+
     private final ObjectMapper json = new ObjectMapper();
-    private final List<ObjectNode> pets = new ArrayList<>();
+    private final List<ObjectNode> pets = new CopyOnWriteArrayList<>();
     private final AtomicInteger callCount = new AtomicInteger();
     private final HttpServer server;
 
@@ -58,6 +66,7 @@ public final class LegacyRestServer {
 
     private void handle(HttpExchange ex) throws IOException {
         if (!LEGACY_KEY.equals(ex.getRequestHeaders().getFirst("X-Api-Key"))) {
+            log.warn("Rejected request without a valid X-Api-Key: {} {}", ex.getRequestMethod(), ex.getRequestURI());
             ex.sendResponseHeaders(401, -1);
             ex.close();
             return;
@@ -70,6 +79,13 @@ public final class LegacyRestServer {
                 if ("GET".equals(ex.getRequestMethod())) {
                     respond(ex, 200, json.writeValueAsBytes(pets));
                 } else if ("POST".equals(ex.getRequestMethod())) {
+                    String contentLength = ex.getRequestHeaders().getFirst("Content-Length");
+                    long len = contentLength == null ? -1 : Long.parseLong(contentLength);
+                    if (len > MAX_BODY_BYTES) {
+                        ex.sendResponseHeaders(413, -1);
+                        ex.close();
+                        return;
+                    }
                     JsonNode node = json.readTree(ex.getRequestBody());
                     ObjectNode pet = (ObjectNode) node;
                     pets.add(pet);
@@ -106,8 +122,13 @@ public final class LegacyRestServer {
     private void respond(HttpExchange ex, int status, byte[] body) throws IOException {
         ex.getResponseHeaders().set("Content-Type", "application/json");
         ex.sendResponseHeaders(status, body.length);
-        try (OutputStream os = ex.getResponseBody()) {
-            os.write(body);
+        try {
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write(body);
+            }
+        } finally {
+            // HttpExchange must be closed after every request to release the connection handle.
+            ex.close();
         }
     }
 }
