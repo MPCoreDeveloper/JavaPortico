@@ -13,4 +13,27 @@
   <artifactId>javaportico-annotations</artifactId>
   <name>JavaPortico :: Annotations</name>
   <description>@OpenApiToGrpc annotation, generation options and enums consumed by JavaPortico.</description>
+  <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>MPCoreDeveloper</name>
+      <organization>MPCoreDeveloper</organization>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/MPCoreDeveloper/JavaPortico.git</connection>
+    <developerConnection>scm:git:git@github.com:MPCoreDeveloper/JavaPortico.git</developerConnection>
+    <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+    <tag>HEAD</tag>
+  </scm>
 </project>

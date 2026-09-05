@@ -14,27 +14,57 @@
   <packaging>maven-plugin</packaging>
   <name>JavaPortico :: Maven Plugin</name>
   <description>javaportico:generate goal - turns OpenAPI specs into .proto and gRPC proxy Java sources.</description>
+  <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>MPCoreDeveloper</name>
+      <organization>MPCoreDeveloper</organization>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/MPCoreDeveloper/JavaPortico.git</connection>
+    <developerConnection>scm:git:git@github.com:MPCoreDeveloper/JavaPortico.git</developerConnection>
+    <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <dependencies>
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-core</artifactId>
+      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-annotations</artifactId>
+      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-api</artifactId>
+      <version>3.9.11</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-core</artifactId>
+      <version>3.9.11</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>
       <artifactId>maven-plugin-annotations</artifactId>
+      <version>3.15.1</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

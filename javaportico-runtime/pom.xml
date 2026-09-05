@@ -13,35 +13,65 @@
   <artifactId>javaportico-runtime</artifactId>
   <name>JavaPortico :: Runtime</name>
   <description>Proxy pipeline + auth helpers used by JavaPortico-generated gRPC proxies.</description>
+  <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>MPCoreDeveloper</name>
+      <organization>MPCoreDeveloper</organization>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/MPCoreDeveloper/JavaPortico.git</connection>
+    <developerConnection>scm:git:git@github.com:MPCoreDeveloper/JavaPortico.git</developerConnection>
+    <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <dependencies>
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-annotations</artifactId>
+      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
       <artifactId>grpc-api</artifactId>
+      <version>1.83.1</version>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+      <version>4.36.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java-util</artifactId>
+      <version>4.36.0</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
+      <version>2.22.2</version>
     </dependency>
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
+      <version>3.2.4</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+      <version>2.0.18</version>
     </dependency>
   </dependencies>
 </project>
