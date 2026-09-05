@@ -10,7 +10,9 @@
     <version>0.1.0</version>
   </parent>
 
+  <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-cli</artifactId>
+  <version>0.1.0</version>
   <name>JavaPortico :: CLI</name>
   <description>Command-line companion: parses an OpenAPI spec and reports what JavaPortico would generate.</description>
   <url>https://github.com/MPCoreDeveloper/JavaPortico</url>

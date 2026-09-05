@@ -10,7 +10,9 @@
     <version>0.1.0</version>
   </parent>
 
+  <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-maven-plugin</artifactId>
+  <version>0.1.0</version>
   <packaging>maven-plugin</packaging>
   <name>JavaPortico :: Maven Plugin</name>
   <description>javaportico:generate goal - turns OpenAPI specs into .proto and gRPC proxy Java sources.</description>
