@@ -3,6 +3,8 @@
 **Build-time OpenAPI 3.0/3.1 → gRPC + Protobuf generator for Java (JDK 25 LTS).**
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4)](https://github.com/sponsors/MPCoreDeveloper)
+[![Maven Central - Plugin](https://img.shields.io/maven-central/v/io.github.mpcoredeveloper/javaportico-maven-plugin?label=Maven%20Central%20%E2%80%94%20Plugin)](https://central.sonatype.com/artifact/io.github.mpcoredeveloper/javaportico-maven-plugin)
+[![Maven Central - Runtime](https://img.shields.io/maven-central/v/io.github.mpcoredeveloper/javaportico-runtime?label=Maven%20Central%20%E2%80%94%20Runtime)](https://central.sonatype.com/artifact/io.github.mpcoredeveloper/javaportico-runtime)
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history of changes.
 
