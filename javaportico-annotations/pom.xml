@@ -7,12 +7,12 @@
   <parent>
     <groupId>io.github.mpcoredeveloper</groupId>
     <artifactId>javaportico-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
   </parent>
 
   <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-annotations</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1-SNAPSHOT</version>
   <name>JavaPortico :: Annotations</name>
   <description>@OpenApiToGrpc annotation, generation options and enums consumed by JavaPortico.</description>
   <url>https://github.com/MPCoreDeveloper/JavaPortico</url>

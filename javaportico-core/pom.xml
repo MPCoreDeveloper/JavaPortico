@@ -7,12 +7,12 @@
   <parent>
     <groupId>io.github.mpcoredeveloper</groupId>
     <artifactId>javaportico-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
   </parent>
 
   <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-core</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1-SNAPSHOT</version>
   <name>JavaPortico :: Core</name>
   <description>OpenAPI 3.0/3.1 parser, schema mapper, IR and emitters (proto + gRPC proxy).</description>
   <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
@@ -48,7 +48,7 @@
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-annotations</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.1-SNAPSHOT</version>
     </dependency>
 
     <dependency>

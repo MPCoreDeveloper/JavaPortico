@@ -7,12 +7,12 @@
   <parent>
     <groupId>io.github.mpcoredeveloper</groupId>
     <artifactId>javaportico-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
   </parent>
 
   <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-cli</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1-SNAPSHOT</version>
   <name>JavaPortico :: CLI</name>
   <description>Command-line companion: parses an OpenAPI spec and reports what JavaPortico would generate.</description>
   <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
@@ -43,7 +43,7 @@
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-core</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>info.picocli</groupId>

@@ -23,3 +23,9 @@ jobs:
 
       - name: Build and test
         run: mvn -B -ntp clean verify
+
+      - name: SonarCloud analysis
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar -Dsonar.token=$SONAR_TOKEN

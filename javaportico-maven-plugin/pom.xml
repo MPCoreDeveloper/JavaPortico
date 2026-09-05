@@ -7,12 +7,12 @@
   <parent>
     <groupId>io.github.mpcoredeveloper</groupId>
     <artifactId>javaportico-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
   </parent>
 
   <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-maven-plugin</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
   <name>JavaPortico :: Maven Plugin</name>
   <description>javaportico:generate goal - turns OpenAPI specs into .proto and gRPC proxy Java sources.</description>
@@ -44,12 +44,12 @@
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-core</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-annotations</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>

@@ -8,7 +8,7 @@ import picocli.CommandLine;
 @CommandLine.Command(
         name = "javaportico",
         mixinStandardHelpOptions = true,
-        version = "JavaPortico 0.1.0",
+        version = "JavaPortico 0.1.1-SNAPSHOT",
         description = "Command-line companion for the JavaPortico OpenAPI -> gRPC generator.",
         subcommands = {GenerateCommand.class})
 @SuppressWarnings("java:S106") // CLI console output (stdout/stderr) is intentional.
