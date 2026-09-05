@@ -305,6 +305,10 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
+            <configuration>
+              <!-- Headless signing in CI: read the passphrase from the MAVEN_GPG_PASSPHRASE env var. -->
+              <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase>
+            </configuration>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
