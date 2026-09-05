@@ -35,17 +35,6 @@
     <tag>HEAD</tag>
   </scm>
 
-  <distributionManagement>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
-    </snapshotRepository>
-    <repository>
-      <id>ossrh</id>
-      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-    </repository>
-  </distributionManagement>
-
   <modules>
     <module>javaportico-annotations</module>
     <module>javaportico-core</module>
@@ -87,6 +76,7 @@
     <version.os.maven.plugin>1.7.1</version.os.maven.plugin>
     <version.protobuf.maven.plugin>0.6.1</version.protobuf.maven.plugin>
     <version.gpg.plugin>3.2.8</version.gpg.plugin>
+    <version.central.publishing.plugin>0.11.0</version.central.publishing.plugin>
     <version.source.plugin>3.4.0</version.source.plugin>
     <version.javadoc.plugin>3.12.0</version.javadoc.plugin>
   </properties>
@@ -324,6 +314,20 @@
                 </goals>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <!-- Publishes to the Central Portal (central.sonatype.com) on `mvn -Prelease deploy`.
+                 Credentials are read from ~/.m2/settings.xml <server id="central"> — the user-token
+                 username/password pair from https://central.sonatype.com/usertoken. -->
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>${version.central.publishing.plugin}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>true</autoPublish>
+              <waitUntil>published</waitUntil>
+            </configuration>
           </plugin>
         </plugins>
       </build>

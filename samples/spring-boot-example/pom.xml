@@ -15,9 +15,11 @@
   <name>JavaPortico :: Sample :: Spring Boot</name>
   <description>Spring Boot DI wiring of the generated PetServiceProxy (gRPC -> REST gateway) + legacy REST petstore.</description>
 
+
   <!-- Spring Framework 6.2.x bundles an ASM that reads up to JDK 24 class files;
        this module therefore compiles at release 21 while the rest of JavaPortico stays on JDK 25. -->
   <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
     <version.spring.boot>3.5.16</version.spring.boot>
     <maven.compiler.release>21</maven.compiler.release>
   </properties>
@@ -147,3 +149,4 @@
     </plugins>
   </build>
 </project>
+

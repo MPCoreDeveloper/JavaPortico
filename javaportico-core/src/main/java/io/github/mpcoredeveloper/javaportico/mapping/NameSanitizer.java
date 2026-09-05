@@ -8,12 +8,15 @@ import java.util.List;
  */
 public final class NameSanitizer {
 
+    /** Fallback PascalCase identifier used when a sanitized name is empty. */
+    private static final String FALLBACK_PASCAL = "Field";
+
     private NameSanitizer() {
     }
 
     /** PascalCase sanitizer (C# convention). */
     public static String sanitizePascal(String input) {
-        if (input == null || input.isEmpty()) return "Field";
+        if (input == null || input.isEmpty()) return FALLBACK_PASCAL;
         StringBuilder chars = new StringBuilder(input.length());
         boolean upper = true;
         for (int i = 0; i < input.length(); i++) {
@@ -25,7 +28,7 @@ public final class NameSanitizer {
                 upper = true;
             }
         }
-        if (chars.length() == 0) return "Field";
+        if (chars.isEmpty()) return FALLBACK_PASCAL;
         if (Character.isDigit(chars.charAt(0))) chars.insert(0, 'N');
         return chars.toString();
     }
@@ -36,7 +39,7 @@ public final class NameSanitizer {
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);
             if (Character.isLetterOrDigit(c)) {
-                if (chars.length() > 0 && Character.isUpperCase(c)) {
+                if (!chars.isEmpty() && Character.isUpperCase(c)) {
                     char prev = chars.charAt(chars.length() - 1);
                     if (Character.isLowerCase(prev)) {
                         chars.append('_');
@@ -56,7 +59,7 @@ public final class NameSanitizer {
     /** Sanitizes a raw enum value into a Pascal identifier with a fallback. */
     public static String sanitizeEnumName(String raw, int fallback) {
         String pascal = sanitizePascal(raw);
-        if ((pascal.equals("Field") && (raw == null || raw.isBlank())) || pascal.isEmpty()) {
+        if ((pascal.equals(FALLBACK_PASCAL) && (raw == null || raw.isBlank())) || pascal.isEmpty()) {
             return "VALUE_" + fallback;
         }
         if (Character.isDigit(pascal.charAt(0))) pascal = "V_" + pascal;

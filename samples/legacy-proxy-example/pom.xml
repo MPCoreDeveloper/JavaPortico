@@ -15,6 +15,10 @@
   <name>JavaPortico :: Sample :: Legacy Proxy</name>
   <description>gRPC -> REST proxy demo: cache hit + per-call bypass against a mock legacy REST petstore.</description>
 
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
@@ -106,3 +110,4 @@
     </plugins>
   </build>
 </project>
+

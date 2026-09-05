@@ -10,17 +10,20 @@ import io.github.mpcoredeveloper.javaportico.model.MessageModel;
 import io.github.mpcoredeveloper.javaportico.model.RpcKind;
 import io.github.mpcoredeveloper.javaportico.model.RpcModel;
 import io.github.mpcoredeveloper.javaportico.model.ServiceModel;
-import io.github.mpcoredeveloper.javaportico.model.WorkItem;
+
+import java.util.List;
 
 /**
  * Emits a proto3 descriptor for a {@link GrpcModel}. Ported from SharpPortico's ProtoEmitter.
  */
 public final class ProtoEmitter {
 
+    private static final String TIMESTAMP_IMPORT = "google/protobuf/timestamp.proto";
+
     private ProtoEmitter() {
     }
 
-    public static String emit(GrpcModel model, WorkItem item) {
+    public static String emit(GrpcModel model) {
         CodeWriter w = new CodeWriter();
         w.line("syntax = \"proto3\";");
         w.line();
@@ -29,16 +32,25 @@ public final class ProtoEmitter {
         w.line("option java_package = \"" + model.namespace() + "\";");
         w.line("option java_multiple_files = true;");
         w.line();
+        emitTimestampImport(w, model);
+        emitEnums(w, model.enums());
+        emitMessages(w, model.messages());
+        emitServices(w, model.services());
+        return w.toString();
+    }
 
+    private static void emitTimestampImport(CodeWriter w, GrpcModel model) {
         boolean needsTimestamp = model.messages().stream()
                 .flatMap(m -> m.fields().stream())
                 .anyMatch(f -> f.kind() == FieldKind.TIMESTAMP);
         if (needsTimestamp) {
-            w.line("import \"google/protobuf/timestamp.proto\";");
+            w.line("import \"" + TIMESTAMP_IMPORT + "\";");
             w.line();
         }
+    }
 
-        for (EnumModel enumModel : model.enums()) {
+    private static void emitEnums(CodeWriter w, List<EnumModel> enums) {
+        for (EnumModel enumModel : enums) {
             w.block("enum " + enumModel.name(), () -> {
                 for (EnumValueModel v : enumModel.values()) {
                     w.line(NameSanitizer.toProtoEnumName(v.name()) + " = " + v.number() + ";");
@@ -46,32 +58,34 @@ public final class ProtoEmitter {
             });
             w.line();
         }
+    }
 
-        for (MessageModel msg : model.messages()) {
+    private static void emitMessages(CodeWriter w, List<MessageModel> messages) {
+        for (MessageModel msg : messages) {
             w.block("message " + msg.name(), () -> {
                 for (FieldModel f : msg.fields()) {
                     String keyword = f.repeated() ? "repeated " : "";
-                    String type = protoType(f);
-                    w.line(keyword + type + " " + f.protoName() + " = " + f.number() + ";");
+                    w.line(keyword + protoType(f) + " " + f.protoName() + " = " + f.number() + ";");
                 }
             });
             w.line();
         }
+    }
 
-        for (ServiceModel svc : model.services()) {
+    private static void emitServices(CodeWriter w, List<ServiceModel> services) {
+        for (ServiceModel svc : services) {
             w.block("service " + svc.name(), () -> {
                 for (RpcModel rpc : svc.rpcMethods()) {
                     String reqStream = (rpc.kind() == RpcKind.CLIENT_STREAMING || rpc.kind() == RpcKind.BIDI_STREAMING)
                             ? "stream " : "";
                     String respStream = (rpc.kind() == RpcKind.SERVER_STREAMING || rpc.kind() == RpcKind.BIDI_STREAMING)
                             ? "stream " : "";
-                    w.line("rpc " + rpc.name() + " (" + reqStream + rpc.requestType() + ") returns (" + respStream + rpc.responseType() + ");");
+                    w.line("rpc " + rpc.name() + " (" + reqStream + rpc.requestType() + ") returns ("
+                            + respStream + rpc.responseType() + ");");
                 }
             });
             w.line();
         }
-
-        return w.toString();
     }
 
     private static String protoType(FieldModel f) {

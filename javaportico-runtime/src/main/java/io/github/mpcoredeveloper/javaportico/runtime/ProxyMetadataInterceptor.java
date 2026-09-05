@@ -16,10 +16,10 @@ import io.grpc.ServerInterceptor;
 public final class ProxyMetadataInterceptor implements ServerInterceptor {
 
     @Override
-    public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
-            ServerCall<ReqT, RespT> call,
+    public <T, R> ServerCall.Listener<T> interceptCall(
+            ServerCall<T, R> call,
             Metadata headers,
-            ServerCallHandler<ReqT, RespT> next) {
+            ServerCallHandler<T, R> next) {
         Context ctx = Context.current().withValue(ProxyContext.REQUEST_METADATA, headers);
         return Contexts.interceptCall(ctx, call, headers, next);
     }

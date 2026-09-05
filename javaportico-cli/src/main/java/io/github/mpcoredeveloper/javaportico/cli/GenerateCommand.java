@@ -19,6 +19,7 @@ import java.util.concurrent.Callable;
  */
 @Command(name = "generate",
         description = "Parses an OpenAPI spec and reports what JavaPortico would generate.")
+@SuppressWarnings("java:S106") // CLI console output (stdout/stderr) is intentional.
 public final class GenerateCommand implements Callable<Integer> {
 
     @Parameters(index = "0", description = "OpenAPI specification file (YAML or JSON)")

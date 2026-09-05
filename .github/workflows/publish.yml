@@ -17,15 +17,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          server-id: ossrh
+          # Server id must match <publishingServerId> of the central-publishing-maven-plugin.
+          server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
+      # Publishes through the Central Portal (central.sonatype.com). Samples and tests are demo
+      # modules and must not be deployed, hence the explicit -pl reactor list.
       - name: Build and publish
-        run: mvn -B -ntp clean deploy -Prelease
+        run: >-
+          mvn -B -ntp clean deploy -Prelease -DskipTests
+          -pl javaportico-annotations,javaportico-core,javaportico-maven-plugin,javaportico-runtime,javaportico-cli
         env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

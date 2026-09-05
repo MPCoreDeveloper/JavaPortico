@@ -32,7 +32,7 @@ public final class HttpRestClient implements IRestClient, AutoCloseable {
         this.http = http != null ? http : HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
-        this.baseUrl = (baseUrl == null ? "" : baseUrl).replaceAll("/+$", "");
+        this.baseUrl = stripTrailingSlashes(baseUrl == null ? "" : baseUrl);
         this.maxResponseBytes = Math.max(1, maxResponseBytes);
     }
 
@@ -106,6 +106,14 @@ public final class HttpRestClient implements IRestClient, AutoCloseable {
         int idx = lower.indexOf(lowerToken);
         if (idx < 0) return source;
         return source.substring(0, idx) + replacement + source.substring(idx + token.length());
+    }
+
+    private static String stripTrailingSlashes(String url) {
+        int end = url.length();
+        while (end > 0 && url.charAt(end - 1) == '/') {
+            end--;
+        }
+        return end == url.length() ? url : url.substring(0, end);
     }
 
     private static String percentEncode(String s) {

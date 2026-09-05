@@ -38,12 +38,15 @@ import java.util.List;
  * getPet (cache miss), getPet again (cache hit), getPet with bypass (forced fresh),
  * listPets, createPet. The legacy REST call counter proves the caching behaviour.
  */
+@SuppressWarnings("java:S106") // Demo console output is intentional.
 public final class Main {
 
     private static final String CLIENT_KEY = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+    private static final String REST_CALLS_LABEL = ", REST calls: ";
     private static final int REST_PORT = 5099;
     private static final int GRPC_PORT = 50053;
 
+    @SuppressWarnings("java:S1172") // Parameter required by the JVM main(String[]) launcher contract.
     public static void main(String[] args) throws Exception {
         // ------------------------------------------------------------------ legacy REST service
         LegacyRestServer rest = new LegacyRestServer(REST_PORT);
@@ -86,7 +89,7 @@ public final class Main {
 
         // 2) Same request again -> cache hit; REST count unchanged
         GetPetResponse get2 = authed.getPet(GetPetRequest.newBuilder().setPetId(1).build());
-        System.out.println("GetPet(1) cached -> " + get2.getData().getName() + ", REST calls: " + rest.callCount());
+        System.out.println("GetPet(1) cached -> " + get2.getData().getName() + REST_CALLS_LABEL + rest.callCount());
 
         // 3) Bypass cache per call -> REST again
         Metadata bypassHeaders = new Metadata();
@@ -95,7 +98,7 @@ public final class Main {
         PetServiceGrpc.PetServiceBlockingStub bypassStub = PetServiceGrpc.newBlockingStub(channel)
                 .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(bypassHeaders));
         GetPetResponse get3 = bypassStub.getPet(GetPetRequest.newBuilder().setPetId(1).build());
-        System.out.println("GetPet(1) bypass -> " + get3.getData().getName() + ", REST calls: " + rest.callCount());
+        System.out.println("GetPet(1) bypass -> " + get3.getData().getName() + REST_CALLS_LABEL + rest.callCount());
 
         // 4) Query params -> REST /pets?limit=20&page=1
         ListPetsResponse list = authed.listPets(ListPetsRequest.newBuilder().setLimit(20).setPage(1).build());
@@ -106,7 +109,7 @@ public final class Main {
                 .setBody(Pet.newBuilder().setId(3).setName("Luna").setStatus(StatusEnum.SOLD).build())
                 .build());
         System.out.println("CreatePet -> id=" + created.getData().getId() + " " + created.getData().getName()
-                + ", REST calls: " + rest.callCount());
+                + REST_CALLS_LABEL + rest.callCount());
 
         System.out.println("TOTAL REST calls: " + rest.callCount()
                 + "  (expected 4: get + bypass + list + create)");

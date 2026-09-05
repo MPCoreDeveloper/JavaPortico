@@ -25,7 +25,7 @@ class ProxyEmitTest {
     @Test
     void emitsProxyForPetstore() {
         GrpcModel model = petstore();
-        String proxy = ProxyJavaEmitter.emit(model, item());
+        String proxy = ProxyJavaEmitter.emit(model);
 
         assertTrue(proxy.contains("public final class PetServiceProxy extends PetServiceGrpc.PetServiceImplBase"));
         assertTrue(proxy.contains("public void getPet(GetPetRequest request, StreamObserver<GetPetResponse> responseObserver)"));

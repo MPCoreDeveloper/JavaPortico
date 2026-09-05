@@ -26,9 +26,11 @@ import org.springframework.stereotype.Component;
  * cache-hit + bypass demo as the plain-gRPC sample — all dependencies injected by Spring.
  */
 @Component
+@SuppressWarnings("java:S106") // Demo console output is intentional.
 public class GrpcServerDemoRunner implements CommandLineRunner {
 
     private static final int GRPC_PORT = 50053;
+    private static final String REST_CALLS_LABEL = ", REST calls: ";
 
     private final PetServiceProxy proxy;
     private final LegacyCallCounter counter;
@@ -57,7 +59,7 @@ public class GrpcServerDemoRunner implements CommandLineRunner {
                 + " (status " + get1.getData().getStatus() + "), REST calls: " + counter.getCount());
 
         GetPetResponse get2 = authed.getPet(GetPetRequest.newBuilder().setPetId(1).build());
-        System.out.println("GetPet(1) cached -> " + get2.getData().getName() + ", REST calls: " + counter.getCount());
+        System.out.println("GetPet(1) cached -> " + get2.getData().getName() + REST_CALLS_LABEL + counter.getCount());
 
         Metadata bypassHeaders = new Metadata();
         bypassHeaders.put(Metadata.Key.of("x-portico-key", Metadata.ASCII_STRING_MARSHALLER), ProxyConfiguration.CLIENT_KEY);
@@ -65,7 +67,7 @@ public class GrpcServerDemoRunner implements CommandLineRunner {
         PetServiceGrpc.PetServiceBlockingStub bypassStub = PetServiceGrpc.newBlockingStub(channel)
                 .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(bypassHeaders));
         GetPetResponse get3 = bypassStub.getPet(GetPetRequest.newBuilder().setPetId(1).build());
-        System.out.println("GetPet(1) bypass -> " + get3.getData().getName() + ", REST calls: " + counter.getCount());
+        System.out.println("GetPet(1) bypass -> " + get3.getData().getName() + REST_CALLS_LABEL + counter.getCount());
 
         ListPetsResponse list = authed.listPets(ListPetsRequest.newBuilder().setLimit(20).setPage(1).build());
         System.out.println("ListPets -> " + list.getItemsCount() + " pets, REST calls: " + counter.getCount());
@@ -74,7 +76,7 @@ public class GrpcServerDemoRunner implements CommandLineRunner {
                 .setBody(Pet.newBuilder().setId(3).setName("Luna").setStatus(StatusEnum.SOLD).build())
                 .build());
         System.out.println("CreatePet -> id=" + created.getData().getId() + " " + created.getData().getName()
-                + ", REST calls: " + counter.getCount());
+                + REST_CALLS_LABEL + counter.getCount());
 
         System.out.println("TOTAL REST calls: " + counter.getCount()
                 + "  (expected 4: get + bypass + list + create)");

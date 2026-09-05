@@ -27,6 +27,11 @@ import static io.github.mpcoredeveloper.javaportico.mapping.NameSanitizer.toProt
  */
 public final class SchemaMapper {
 
+    private static final String JAVA_TYPE_STRING = "String";
+    private static final String JAVA_TYPE_BOOLEAN = "boolean";
+    private static final String SCHEMA_TYPE_OBJECT = "object";
+    private static final String SCHEMA_TYPE_ARRAY = "array";
+
     private final OpenAPI document;
     private final LinkedHashMap<String, MessageModel> messages = new LinkedHashMap<>();
     private final LinkedHashMap<String, EnumModel> enums = new LinkedHashMap<>();
@@ -58,29 +63,34 @@ public final class SchemaMapper {
         int number = 0;
         if (schema.getEnum() != null) {
             for (Object value : schema.getEnum()) {
-                String rawName;
-                Integer rawNum = null;
-                if (value instanceof Number n) {
-                    long wide = n.longValue();
-                    if (wide < Integer.MIN_VALUE || wide > Integer.MAX_VALUE) {
-                        throw new IllegalArgumentException("Enum value " + n + " for '" + name
-                                + "' exceeds the int32 range supported by protobuf enums: " + wide);
-                    }
-                    rawNum = (int) wide;
-                    rawName = n.toString();
-                } else if (value instanceof String s) {
-                    rawName = s;
-                } else {
-                    rawName = "VALUE_" + number;
-                }
-                String clean = sanitizeEnumName(rawName, number);
-                values.add(new EnumValueModel(clean, rawNum != null ? rawNum : number, rawName));
+                values.add(mapEnumValue(name, value, number));
                 number++;
             }
         }
         EnumModel model = new EnumModel(sanitizePascal(name), values);
         enums.put(name, model);
         return model;
+    }
+
+    /** Converts one raw enum entry into an {@link EnumValueModel}, enforcing the int32 proto range. */
+    private static EnumValueModel mapEnumValue(String enumName, Object value, int number) {
+        String rawName;
+        Integer rawNum = null;
+        switch (value) {
+            case Number n -> {
+                long wide = n.longValue();
+                if (wide < Integer.MIN_VALUE || wide > Integer.MAX_VALUE) {
+                    throw new IllegalArgumentException("Enum value " + n + " for '" + enumName
+                            + "' exceeds the int32 range supported by protobuf enums: " + wide);
+                }
+                rawNum = (int) wide;
+                rawName = n.toString();
+            }
+            case String s -> rawName = s;
+            default -> rawName = "VALUE_" + number;
+        }
+        String clean = sanitizeEnumName(rawName, number);
+        return new EnumValueModel(clean, rawNum != null ? rawNum : number, rawName);
     }
 
     /** Looks up a component schema by its {@code $ref} identifier. */
@@ -105,49 +115,52 @@ public final class SchemaMapper {
         String key = sanitizePascal(name);
         if (messages.containsKey(key)) return messages.get(key);
 
+        MessageModel alias = aliasMessageIfRefOnly(key, schema, isRequest, isResponse);
+        if (alias != null) return alias;
+
+        MessageModel model = new MessageModel(key, collectFields(schema), isRequest, isResponse);
+        messages.put(key, model);
+        return model;
+    }
+
+    /** A pure {@code $ref} or single-$ref {@code allOf} schema becomes an empty alias message. */
+    private MessageModel aliasMessageIfRefOnly(String key, Schema<?> schema, boolean isRequest, boolean isResponse) {
+        if (schema.get$ref() != null && countOwnDefinitions(schema) == 0) {
+            return registerAlias(key, isRequest, isResponse);
+        }
+        List<Schema> allOf = schema.getAllOf();
+        if (allOf != null && allOf.size() == 1
+                && (schema.getProperties() == null || schema.getProperties().isEmpty())
+                && schema.getType() == null
+                && allOf.get(0).get$ref() != null) {
+            return registerAlias(key, isRequest, isResponse);
+        }
+        return null;
+    }
+
+    private MessageModel registerAlias(String key, boolean isRequest, boolean isResponse) {
+        MessageModel alias = new MessageModel(key, List.of(), isRequest, isResponse);
+        messages.put(key, alias);
+        return alias;
+    }
+
+    /** Builds the field list of a message from the schema's composition ({@code allOf}/{@code oneOf}/...). */
+    private List<FieldModel> collectFields(Schema<?> schema) {
         List<FieldModel> fields = new ArrayList<>();
         int[] fieldNo = {0};
-
-        // $ref alias: pure reference schema with no inline definitions.
-        if (schema.get$ref() != null && countOwnDefinitions(schema) == 0) {
-            String targetName = sanitizePascal(refId(schema.get$ref()));
-            MessageModel alias = new MessageModel(key, List.of(), isRequest, isResponse);
-            messages.put(key, alias);
-            return alias;
-        }
-
         List<Schema> allOf = schema.getAllOf();
         List<Schema> oneOf = schema.getOneOf();
         List<Schema> anyOf = schema.getAnyOf();
 
         if (allOf != null && !allOf.isEmpty()) {
-            // allOf with exactly one $ref and nothing else -> alias to that type.
-            if (allOf.size() == 1
-                    && (schema.getProperties() == null || schema.getProperties().isEmpty())
-                    && schema.getType() == null
-                    && allOf.get(0).get$ref() != null) {
-                String targetName = sanitizePascal(refId(allOf.get(0).get$ref()));
-                MessageModel alias = new MessageModel(key, List.of(), isRequest, isResponse);
-                messages.put(key, alias);
-                return alias;
-            }
             for (Schema sub : allOf) mergeSchemaFields(fields, sub, fieldNo);
             mergeSchemaProperties(fields, schema, fieldNo);
         } else if ((oneOf != null && !oneOf.isEmpty()) || (anyOf != null && !anyOf.isEmpty())) {
-            List<Schema> choices = (oneOf != null && !oneOf.isEmpty()) ? oneOf : anyOf;
-            if (choices.size() == 1) {
-                mergeSchemaFields(fields, choices.get(0), fieldNo);
-            } else {
-                // Add a string discriminator + flatten the first object-valued choice.
-                fields.add(new FieldModel("Kind", "kind", ++fieldNo[0], FieldKind.STRING, "String"));
-                Schema chosen = choices.stream()
-                        .filter(c -> c.getProperties() != null && !c.getProperties().isEmpty())
-                        .findFirst().orElse(choices.get(0));
-                mergeSchemaFields(fields, chosen, fieldNo);
-            }
-        } else if ((schema.getProperties() != null && !schema.getProperties().isEmpty()) || "object".equals(schema.getType())) {
+            collectCompositionFields(fields, (oneOf != null && !oneOf.isEmpty()) ? oneOf : anyOf, fieldNo);
+        } else if ((schema.getProperties() != null && !schema.getProperties().isEmpty())
+                || SCHEMA_TYPE_OBJECT.equals(schema.getType())) {
             mergeSchemaProperties(fields, schema, fieldNo);
-        } else if ("array".equals(schema.getType())) {
+        } else if (SCHEMA_TYPE_ARRAY.equals(schema.getType())) {
             // Top-level array schema -> repeated single field named Values.
             FieldModel field = mapProperty("Values", schema, fieldNo);
             if (field != null) fields.add(field);
@@ -158,12 +171,23 @@ public final class SchemaMapper {
         }
 
         if (fields.isEmpty()) {
-            fields.add(new FieldModel("_HasValue", "has_value", 1, FieldKind.BOOL, "boolean"));
+            fields.add(new FieldModel("_HasValue", "has_value", 1, FieldKind.BOOL, JAVA_TYPE_BOOLEAN));
         }
+        return fields;
+    }
 
-        MessageModel model = new MessageModel(key, fields, isRequest, isResponse);
-        messages.put(key, model);
-        return model;
+    /** Flattens {@code oneOf}/{@code anyOf}: a single choice is merged directly; otherwise a discriminator is added. */
+    private void collectCompositionFields(List<FieldModel> fields, List<Schema> choices, int[] fieldNo) {
+        if (choices.size() == 1) {
+            mergeSchemaFields(fields, choices.get(0), fieldNo);
+        } else {
+            // Add a string discriminator + flatten the first object-valued choice.
+            fields.add(new FieldModel("Kind", "kind", ++fieldNo[0], FieldKind.STRING, JAVA_TYPE_STRING));
+            Schema chosen = choices.stream()
+                    .filter(c -> c.getProperties() != null && !c.getProperties().isEmpty())
+                    .findFirst().orElse(choices.get(0));
+            mergeSchemaFields(fields, chosen, fieldNo);
+        }
     }
 
     private int countOwnDefinitions(Schema<?> schema) {
@@ -209,69 +233,64 @@ public final class SchemaMapper {
      * Maps a property/parameter to a {@link FieldModel}. Mirrors SharpPortico's {@code MapProperty}.
      */
     public FieldModel mapProperty(String name, Schema<?> schema, int[] fieldNo) {
-        // $ref -> message or enum reference.
-        if (schema.get$ref() != null) {
-            String refId = refId(schema.get$ref());
-            String refName = sanitizePascal(refId);
-            Schema<?> target = resolveComponent(refId);
-            boolean isEnum = isEnum(target);
-            FieldKind kind = isEnum ? FieldKind.ENUM : FieldKind.MESSAGE;
-            return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0], kind, refName, refName, false);
+        if (schema.get$ref() != null) return mapRefField(name, schema, fieldNo, false);
+        if (SCHEMA_TYPE_ARRAY.equals(schema.getType())) return mapArrayField(name, schema, fieldNo);
+        if (schema.getEnum() != null && !schema.getEnum().isEmpty()) return mapInlineEnumField(name, schema, fieldNo, false);
+        if ((schema.getProperties() != null && !schema.getProperties().isEmpty())
+                || SCHEMA_TYPE_OBJECT.equals(schema.getType())) {
+            return mapNestedMessageField(name, schema, fieldNo, false);
         }
-
-        // array -> repeated
-        if ("array".equals(schema.getType())) {
-            Schema<?> items = schema.getItems();
-            String repeatedName = sanitizePascal(name);
-            if (items == null) {
-                return new FieldModel(repeatedName, toProtoName(name), name, ++fieldNo[0], FieldKind.STRING, "String", "String", true);
-            }
-            if (items.get$ref() != null) {
-                String refId = refId(items.get$ref());
-                String refName = sanitizePascal(refId);
-                Schema<?> target = resolveComponent(refId);
-                boolean isEnum = isEnum(target);
-                FieldKind kind = isEnum ? FieldKind.ENUM : FieldKind.MESSAGE;
-                return new FieldModel(repeatedName, toProtoName(name), name, ++fieldNo[0], kind, refName, refName, true);
-            }
-            if (items.getEnum() != null && !items.getEnum().isEmpty()) {
-                String enumName = repeatedName + "Enum";
-                mapEnum(enumName, items);
-                return new FieldModel(repeatedName, toProtoName(name), name, ++fieldNo[0], FieldKind.ENUM, enumName, enumName, true);
-            }
-            if ((items.getProperties() != null && !items.getProperties().isEmpty()) || "object".equals(items.getType())) {
-                String nestedName = repeatedName;
-                if (!messages.containsKey(nestedName)) {
-                    mapSchemaToMessage(nestedName, items, false, false);
-                }
-                return new FieldModel(repeatedName, toProtoName(name), name, ++fieldNo[0], FieldKind.MESSAGE, nestedName, nestedName, true);
-            }
-            FieldModel scalar = mapScalarField(name, items, fieldNo);
-            if (scalar != null) {
-                return new FieldModel(scalar.name(), scalar.protoName(), scalar.originalName(), scalar.number(), scalar.kind(),
-                        scalar.javaType(), scalar.typeName(), true);
-            }
-            return new FieldModel(repeatedName, toProtoName(name), name, ++fieldNo[0], FieldKind.STRING, "String", "String", true);
-        }
-
-        // inline enum
-        if (schema.getEnum() != null && !schema.getEnum().isEmpty()) {
-            String enumName = sanitizePascal(name) + "Enum";
-            mapEnum(enumName, schema);
-            return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0], FieldKind.ENUM, enumName, enumName, false);
-        }
-
-        // inline object / nested message
-        if ((schema.getProperties() != null && !schema.getProperties().isEmpty()) || "object".equals(schema.getType())) {
-            String nestedName = sanitizePascal(name);
-            if (!messages.containsKey(nestedName)) {
-                mapSchemaToMessage(nestedName, schema, false, false);
-            }
-            return new FieldModel(nestedName, toProtoName(name), name, ++fieldNo[0], FieldKind.MESSAGE, nestedName, nestedName, false);
-        }
-
-        // scalar
         return mapScalarField(name, schema, fieldNo);
+    }
+
+    /** Maps a {@code $ref} property/parameter to a message or enum reference field. */
+    private FieldModel mapRefField(String name, Schema<?> schema, int[] fieldNo, boolean repeated) {
+        String refIdentifier = refId(schema.get$ref());
+        String refName = sanitizePascal(refIdentifier);
+        Schema<?> target = resolveComponent(refIdentifier);
+        FieldKind kind = isEnum(target) ? FieldKind.ENUM : FieldKind.MESSAGE;
+        return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0], kind, refName, refName, repeated);
+    }
+
+    /** Maps an inline enum schema (registered by name) to an enum field. */
+    private FieldModel mapInlineEnumField(String name, Schema<?> schema, int[] fieldNo, boolean repeated) {
+        String enumName = sanitizePascal(name) + "Enum";
+        mapEnum(enumName, schema);
+        return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0], FieldKind.ENUM, enumName, enumName, repeated);
+    }
+
+    /** Maps an inline object schema (registered by name) to a nested message field. */
+    private FieldModel mapNestedMessageField(String name, Schema<?> schema, int[] fieldNo, boolean repeated) {
+        String nestedName = sanitizePascal(name);
+        if (!messages.containsKey(nestedName)) {
+            mapSchemaToMessage(nestedName, schema, false, false);
+        }
+        return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0], FieldKind.MESSAGE, nestedName, nestedName, repeated);
+    }
+
+    /** Maps an array schema to a repeated field whose items are refs, inline enums, inline objects or scalars. */
+    private FieldModel mapArrayField(String name, Schema<?> schema, int[] fieldNo) {
+        Schema<?> items = schema.getItems();
+        if (items == null) {
+            return stringArrayField(name, fieldNo);
+        }
+        if (items.get$ref() != null) return mapRefField(name, items, fieldNo, true);
+        if (items.getEnum() != null && !items.getEnum().isEmpty()) return mapInlineEnumField(name, items, fieldNo, true);
+        if ((items.getProperties() != null && !items.getProperties().isEmpty())
+                || SCHEMA_TYPE_OBJECT.equals(items.getType())) {
+            return mapNestedMessageField(name, items, fieldNo, true);
+        }
+        FieldModel scalar = mapScalarField(name, items, fieldNo);
+        if (scalar != null) {
+            return new FieldModel(scalar.name(), scalar.protoName(), scalar.originalName(), scalar.number(),
+                    scalar.kind(), scalar.javaType(), scalar.typeName(), true);
+        }
+        return stringArrayField(name, fieldNo);
+    }
+
+    private FieldModel stringArrayField(String name, int[] fieldNo) {
+        return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0],
+                FieldKind.STRING, JAVA_TYPE_STRING, JAVA_TYPE_STRING, true);
     }
 
     /** Maps an OpenAPI path/query/header parameter to a request field. */
@@ -295,11 +314,11 @@ public final class SchemaMapper {
 
     /** True when the schema is a top-level array whose items are inline objects (not $ref). */
     public boolean isArrayOfInlineObject(Schema<?> schema) {
-        return "array".equals(schema.getType())
+        return SCHEMA_TYPE_ARRAY.equals(schema.getType())
                 && schema.getItems() != null
                 && schema.getItems().get$ref() == null
                 && ((schema.getItems().getProperties() != null && !schema.getItems().getProperties().isEmpty())
-                    || "object".equals(schema.getItems().getType()));
+                    || SCHEMA_TYPE_OBJECT.equals(schema.getItems().getType()));
     }
 
     /** Derives a deterministic name for the element message of an inline array schema. */
@@ -320,15 +339,21 @@ public final class SchemaMapper {
         String type = schema.getType() == null ? "" : schema.getType().toLowerCase();
         String format = schema.getFormat() == null ? "" : schema.getFormat();
         return switch (type) {
-            case "string" -> ("binary".equalsIgnoreCase(format) || "byte".equalsIgnoreCase(format))
-                    ? FieldKind.BYTES
-                    : ("date-time".equalsIgnoreCase(format) ? FieldKind.TIMESTAMP : FieldKind.STRING);
+            case "string" -> mapStringFormat(format);
             case "integer" -> "int64".equalsIgnoreCase(format) ? FieldKind.INT64 : FieldKind.INT32;
             case "number" -> "float".equalsIgnoreCase(format) ? FieldKind.FLOAT : FieldKind.DOUBLE;
             case "boolean" -> FieldKind.BOOL;
             case "file" -> FieldKind.BYTES;
             default -> FieldKind.STRING;
         };
+    }
+
+    /** Resolves the field kind for string formats ({@code binary}/{@code byte}/{@code date-time}). */
+    private static FieldKind mapStringFormat(String format) {
+        if ("binary".equalsIgnoreCase(format) || "byte".equalsIgnoreCase(format)) {
+            return FieldKind.BYTES;
+        }
+        return "date-time".equalsIgnoreCase(format) ? FieldKind.TIMESTAMP : FieldKind.STRING;
     }
 
     /** Maps a field kind to a Java type used in generated getter calls. */

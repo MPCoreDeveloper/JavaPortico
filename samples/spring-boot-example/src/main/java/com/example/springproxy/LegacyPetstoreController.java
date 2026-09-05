@@ -26,6 +26,9 @@ public class LegacyPetstoreController {
 
     private static final Logger log = LoggerFactory.getLogger(LegacyPetstoreController.class);
 
+    /** Inbound API-key header name used by the mock legacy service. */
+    private static final String API_KEY_HEADER = "X-Api-Key";
+
     public static final String LEGACY_KEY = "legacy-secret-key";
 
     private final List<Map<String, Object>> pets = new CopyOnWriteArrayList<>();
@@ -42,34 +45,35 @@ public class LegacyPetstoreController {
     }
 
     @GetMapping
-    public ResponseEntity<?> list(HttpServletRequest request) {
-        if (!LEGACY_KEY.equals(request.getHeader("X-Api-Key"))) {
+    public ResponseEntity<Object> list(HttpServletRequest request) {
+        if (!LEGACY_KEY.equals(request.getHeader(API_KEY_HEADER))) {
             log.warn("Rejected {} {} without a valid X-Api-Key", request.getMethod(), request.getRequestURI());
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(401).body(null);
         }
         counter.increment();
         return ResponseEntity.ok(pets);
     }
 
     @GetMapping("/{petId}")
-    public ResponseEntity<?> get(@PathVariable long petId, HttpServletRequest request) {
-        if (!LEGACY_KEY.equals(request.getHeader("X-Api-Key"))) {
+    public ResponseEntity<Object> get(@PathVariable long petId, HttpServletRequest request) {
+        if (!LEGACY_KEY.equals(request.getHeader(API_KEY_HEADER))) {
             log.warn("Rejected {} {} without a valid X-Api-Key", request.getMethod(), request.getRequestURI());
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(401).body(null);
         }
         counter.increment();
-        return pets.stream()
-                .filter(p -> ((Number) p.get("id")).longValue() == petId)
-                .findFirst()
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(404).build());
+        for (Map<String, Object> p : pets) {
+            if (((Number) p.get("id")).longValue() == petId) {
+                return ResponseEntity.ok(p);
+            }
+        }
+        return ResponseEntity.status(404).body(null);
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, Object> pet, HttpServletRequest request) {
-        if (!LEGACY_KEY.equals(request.getHeader("X-Api-Key"))) {
+    public ResponseEntity<Object> create(@RequestBody Map<String, Object> pet, HttpServletRequest request) {
+        if (!LEGACY_KEY.equals(request.getHeader(API_KEY_HEADER))) {
             log.warn("Rejected {} {} without a valid X-Api-Key", request.getMethod(), request.getRequestURI());
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(401).body(null);
         }
         counter.increment();
         pets.add(pet);

@@ -17,8 +17,10 @@ import io.grpc.ServerBuilder;
 /**
  * Demo: starts a gRPC server with the generated PetService, then calls it with a BlockingStub.
  */
+@SuppressWarnings("java:S106") // Demo console output is intentional.
 public final class Main {
 
+    @SuppressWarnings("java:S1172") // Parameter required by the JVM main(String[]) launcher contract.
     public static void main(String[] args) throws Exception {
         int port = 50051;
         Server server = ServerBuilder.forPort(port)

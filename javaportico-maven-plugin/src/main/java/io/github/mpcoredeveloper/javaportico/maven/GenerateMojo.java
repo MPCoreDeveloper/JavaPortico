@@ -53,13 +53,24 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter(defaultValue = "false", property = "javaportico.skip")
     private boolean skip;
 
-    /** Validates a configured Java package (namespace) before it becomes a file-system path. */
-    private static final java.util.regex.Pattern JAVA_PACKAGE =
-            java.util.regex.Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*");
-
-    /** Validates a service name used in generated file names. */
+    /** Validates a Java identifier used for service names and individual package segments. */
     private static final java.util.regex.Pattern JAVA_IDENTIFIER =
             java.util.regex.Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
+
+    /**
+     * Validates a fully-qualified Java package name. Each dot-separated segment is checked against
+     * {@link #JAVA_IDENTIFIER}; this deliberately avoids a nested-quantifier regex like
+     * {@code seg(\.seg)*}, which could backtrack super-linearly on crafted input (S5998).
+     */
+    private static boolean isValidJavaPackage(String value) {
+        if (value == null) return false;
+        for (String segment : value.split("\\.", -1)) {
+            if (segment.isEmpty() || !JAVA_IDENTIFIER.matcher(segment).matches()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -129,7 +140,7 @@ public class GenerateMojo extends AbstractMojo {
         GrpcModel model = result.model();
 
         if (options.isEmitProtoFile()) {
-            String proto = ProtoEmitter.emit(model, item);
+            String proto = ProtoEmitter.emit(model);
             File out = new File(protoOutputDirectory, hint + ".proto");
             Files.createDirectories(out.getParentFile().toPath());
             Files.writeString(out.toPath(), proto);
@@ -143,14 +154,15 @@ public class GenerateMojo extends AbstractMojo {
             // would otherwise resolve outside the configured output directory.
             String ns = model.namespace();
             String svc = model.serviceName();
-            if (!JAVA_PACKAGE.matcher(ns).matches() || !JAVA_IDENTIFIER.matcher(svc).matches()) {
+            if (!isValidJavaPackage(ns) || !JAVA_IDENTIFIER.matcher(svc).matches()) {
                 getLog().error("JavaPortico: refusing to generate proxy source: namespace '" + ns
                         + "' and/or service name '" + svc + "' is not a valid Java package/identifier (path traversal guard).");
                 return;
             }
-            String java = ProxyJavaEmitter.emit(model, item);
-            File out = new File(javaOutputDirectory,
-                    model.namespace().replace('.', '/') + "/" + model.serviceName() + "Proxy.java");
+            String java = ProxyJavaEmitter.emit(model);
+            String relativePath = model.namespace().replace('.', File.separatorChar)
+                    + File.separator + model.serviceName() + "Proxy.java";
+            File out = new File(javaOutputDirectory, relativePath);
             Files.createDirectories(out.getParentFile().toPath());
             Files.writeString(out.toPath(), java);
             project.addCompileSourceRoot(javaOutputDirectory.getAbsolutePath());

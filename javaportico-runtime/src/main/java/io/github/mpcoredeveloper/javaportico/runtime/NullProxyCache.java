@@ -13,6 +13,7 @@ public final class NullProxyCache implements IProxyCache {
     }
 
     @Override
+    @SuppressWarnings("java:S1168") // null is the documented cache-miss contract for IProxyCache (generated proxies rely on it).
     public byte[] get(String key) {
         return null;
     }

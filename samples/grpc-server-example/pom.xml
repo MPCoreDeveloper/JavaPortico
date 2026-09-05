@@ -15,6 +15,10 @@
   <name>JavaPortico :: Sample :: gRPC Server</name>
   <description>Plain gRPC server + client generated from an OpenAPI petstore spec.</description>
 
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.grpc</groupId>
@@ -97,3 +101,4 @@
     </plugins>
   </build>
 </project>
+

@@ -40,7 +40,7 @@ public class SpecConfig {
         ClientKeyMode mode;
         try {
             mode = ClientKeyMode.valueOf(proxyClientKeyMode == null ? "NONE" : proxyClientKeyMode.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             mode = ClientKeyMode.NONE;
         }
         return JavaPorticoOptions.defaults()

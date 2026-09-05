@@ -15,6 +15,10 @@
   <name>JavaPortico :: Tests</name>
   <description>JUnit 5 tests for mapping, proto emission, proxy generation and the runtime pipeline.</description>
 
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
@@ -45,3 +49,4 @@
     </plugins>
   </build>
 </project>
+

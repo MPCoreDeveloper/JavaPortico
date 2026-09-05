@@ -7,10 +7,8 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -72,50 +70,61 @@ public final class LegacyRestServer {
             return;
         }
         callCount.incrementAndGet();
-
-        String path = ex.getRequestURI().getPath();
         try {
-            if ("/pets".equals(path)) {
-                if ("GET".equals(ex.getRequestMethod())) {
-                    respond(ex, 200, json.writeValueAsBytes(pets));
-                } else if ("POST".equals(ex.getRequestMethod())) {
-                    String contentLength = ex.getRequestHeaders().getFirst("Content-Length");
-                    long len = contentLength == null ? -1 : Long.parseLong(contentLength);
-                    if (len > MAX_BODY_BYTES) {
-                        ex.sendResponseHeaders(413, -1);
-                        ex.close();
-                        return;
-                    }
-                    JsonNode node = json.readTree(ex.getRequestBody());
-                    ObjectNode pet = (ObjectNode) node;
-                    pets.add(pet);
-                    respond(ex, 201, json.writeValueAsBytes(pet));
-                } else {
-                    ex.sendResponseHeaders(405, -1);
-                    ex.close();
-                }
-            } else if (path.startsWith("/pets/")) {
-                long id = Long.parseLong(path.substring("/pets/".length()));
-                ObjectNode found = null;
-                for (ObjectNode p : pets) {
-                    if (p.path("id").asLong() == id) {
-                        found = p;
-                        break;
-                    }
-                }
-                if (found == null) {
-                    ex.sendResponseHeaders(404, -1);
-                    ex.close();
-                } else {
-                    respond(ex, 200, json.writeValueAsBytes(found));
-                }
-            } else {
-                ex.sendResponseHeaders(404, -1);
-                ex.close();
-            }
-        } catch (RuntimeException ex2) {
+            route(ex);
+        } catch (RuntimeException _) {
             ex.sendResponseHeaders(400, -1);
             ex.close();
+        }
+    }
+
+    private void route(HttpExchange ex) throws IOException {
+        String path = ex.getRequestURI().getPath();
+        if ("/pets".equals(path)) {
+            handlePetsCollection(ex);
+        } else if (path.startsWith("/pets/")) {
+            handlePetDetail(ex, path.substring("/pets/".length()));
+        } else {
+            ex.sendResponseHeaders(404, -1);
+            ex.close();
+        }
+    }
+
+    private void handlePetsCollection(HttpExchange ex) throws IOException {
+        if ("GET".equals(ex.getRequestMethod())) {
+            respond(ex, 200, json.writeValueAsBytes(pets));
+        } else if ("POST".equals(ex.getRequestMethod())) {
+            String contentLength = ex.getRequestHeaders().getFirst("Content-Length");
+            long len = contentLength == null ? -1 : Long.parseLong(contentLength);
+            if (len > MAX_BODY_BYTES) {
+                ex.sendResponseHeaders(413, -1);
+                ex.close();
+                return;
+            }
+            JsonNode node = json.readTree(ex.getRequestBody());
+            ObjectNode pet = (ObjectNode) node;
+            pets.add(pet);
+            respond(ex, 201, json.writeValueAsBytes(pet));
+        } else {
+            ex.sendResponseHeaders(405, -1);
+            ex.close();
+        }
+    }
+
+    private void handlePetDetail(HttpExchange ex, String idSegment) throws IOException {
+        long id = Long.parseLong(idSegment);
+        ObjectNode found = null;
+        for (ObjectNode p : pets) {
+            if (p.path("id").asLong() == id) {
+                found = p;
+                break;
+            }
+        }
+        if (found == null) {
+            ex.sendResponseHeaders(404, -1);
+            ex.close();
+        } else {
+            respond(ex, 200, json.writeValueAsBytes(found));
         }
     }
 

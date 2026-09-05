@@ -11,6 +11,7 @@ import picocli.CommandLine;
         version = "JavaPortico 0.1.0",
         description = "Command-line companion for the JavaPortico OpenAPI -> gRPC generator.",
         subcommands = {GenerateCommand.class})
+@SuppressWarnings("java:S106") // CLI console output (stdout/stderr) is intentional.
 public final class CliMain implements Runnable {
 
     @Override

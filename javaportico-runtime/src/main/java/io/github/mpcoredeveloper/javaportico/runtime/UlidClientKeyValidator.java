@@ -65,7 +65,7 @@ public final class UlidClientKeyValidator implements IClientKeyValidator {
             if (digit < 0) return null;
             // A valid ULID's first character encodes only 3 bits (values 0-7).
             if (i == 0 && digit > 7) return null;
-            value = (value << 5) | (long) digit;
+            value = (value << 5) | digit;
         }
         // ULID: the first 10 characters encode the 48-bit millisecond timestamp.
         // Ten Crockford base32 characters hold 50 bits, and the top 2 bits of a

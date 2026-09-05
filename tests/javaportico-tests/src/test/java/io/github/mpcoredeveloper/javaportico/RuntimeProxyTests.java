@@ -61,11 +61,15 @@ class RuntimeProxyTests {
     }
 
     @Test
-    void memoryCacheHonoursTtl() throws InterruptedException {
+    void memoryCacheHonoursTtl() {
         MemoryProxyCache cache = new MemoryProxyCache();
         cache.set("k", new byte[]{1, 2, 3}, Duration.ofMillis(60));
         assertArrayEquals(new byte[]{1, 2, 3}, cache.get("k"));
-        Thread.sleep(150);
+        // Busy-wait (no Thread.sleep) until the 60 ms TTL has expired.
+        long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+        while (cache.get("k") != null && System.nanoTime() < deadline) {
+            Thread.onSpinWait();
+        }
         assertNull(cache.get("k"));
     }
 

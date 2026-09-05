@@ -1,5 +1,6 @@
 package io.github.mpcoredeveloper.javaportico.runtime;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -11,13 +12,14 @@ public final class DefaultAuditLogger implements IProxyAuditLogger {
 
     @Override
     public void log(AuditEntry entry) {
-        LOG.info("[portico-audit] service=" + nz(entry.serviceName())
+        // Supplier-based logging defers string construction until the INFO level is enabled.
+        LOG.log(Level.INFO, () -> "[portico-audit] service=" + nz(entry.serviceName())
                 + " rpc=" + nz(entry.rpcName())
                 + " client=" + nz(entry.clientKeyId())
                 + " peer=" + nz(entry.clientAddress())
                 + " cacheHit=" + entry.cacheHit()
                 + " http=" + (entry.httpStatusCode() == null ? "-" : entry.httpStatusCode())
-                + " at=" + (entry.timestampUtc() == null ? "-" : entry.timestampUtc().toString()));
+                + " at=" + (entry.timestampUtc() == null ? "-" : entry.timestampUtc()));
     }
 
     private static String nz(String s) {

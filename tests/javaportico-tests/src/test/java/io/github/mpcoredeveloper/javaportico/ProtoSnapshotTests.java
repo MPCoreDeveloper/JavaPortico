@@ -23,8 +23,7 @@ class ProtoSnapshotTests {
     @Test
     void emitsProtoForPetstore() {
         GrpcModel model = petstore();
-        WorkItem item = item();
-        String proto = ProtoEmitter.emit(model, item);
+        String proto = ProtoEmitter.emit(model);
 
         assertTrue(proto.contains("syntax = \"proto3\";"));
         assertTrue(proto.contains("package com.example.generated;"));

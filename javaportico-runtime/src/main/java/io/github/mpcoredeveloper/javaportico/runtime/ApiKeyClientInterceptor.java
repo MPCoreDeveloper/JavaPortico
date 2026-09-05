@@ -22,13 +22,13 @@ public final class ApiKeyClientInterceptor implements ClientInterceptor {
     }
 
     @Override
-    public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
-            MethodDescriptor<ReqT, RespT> method,
+    public <T, R> ClientCall<T, R> interceptCall(
+            MethodDescriptor<T, R> method,
             CallOptions callOptions,
             Channel next) {
         return new ForwardingClientCall.SimpleForwardingClientCall<>(next.newCall(method, callOptions)) {
             @Override
-            public void start(Listener<RespT> responseListener, Metadata headers) {
+            public void start(Listener<R> responseListener, Metadata headers) {
                 headers.merge(AuthMetadata.apiKey(headerName, key));
                 super.start(responseListener, headers);
             }

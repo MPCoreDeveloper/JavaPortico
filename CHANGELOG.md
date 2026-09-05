@@ -35,6 +35,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `HttpRestClient(HttpClient, String, int maxResponseBytes)` constructor.
 - Unit tests for ULID `describe()` timestamp decoding and `ProxyJavaEmitter` string-literal escaping.
 
+### Code quality (SonarCloud cleanup)
+
+- `RestRequest`/`RestResponse` records now override `equals`/`hashCode`/`toString` so the `byte[]`
+  payload participates by content (`S6218`).
+- `GenerateMojo` validates package names by splitting on `.` instead of a nested-quantifier regex,
+  removing a stack-overflow/backtracking risk (`S5998`); output paths now use `File.separator`
+  (`S1075`).
+- Split the largest mapping/emission methods (`OpenApiParser.mapOperation`, `parseAndMap`,
+  `SchemaMapper.mapSchemaToMessage`/`mapProperty`/`mapEnum`, `ProtoEmitter.emit`,
+  `ProxyJavaEmitter.emitUnary`/`emitSerializeField`/`emitParseField`) into focused helpers
+  (cognitive complexity, `S3776`), switched `if/else` chains to pattern `switch`
+  (`S6880`, `S7467`), and de-duplicated generated-code template fragments (`S1192`).
+- Removed unused parameters/imports/local variables (`S1172`, `S1128`, `S1481`), redundant casts
+  (`S1905`) and nested ternaries (`S3358`); fixed `byte`/generic/logging/cache smells in the
+  runtime (`S2629`, `S1168`, `S4276`, `S8786`, `S119`, `S6218`).
+- CLI and demo samples intentionally keep console output (`S106`) and the JVM `main(String[])`
+  contract (`S1172`); these are documented with targeted `@SuppressWarnings`.
+- Publishing prep: switched from the legacy OSSRH staging API to the Central Portal
+  `org.sonatype.central:central-publishing-maven-plugin` (0.11.0) — `mvn -Prelease deploy` uploads
+  and publishes via `central.sonatype.com` using a user token; `samples/*` and `tests/*` are
+  excluded from deployment.
+
 ### Notes
 
 - The hard-coded sample credentials (`legacy-secret-key`, the `01ARZ3NDEK…` ULID client key) are
