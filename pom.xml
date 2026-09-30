@@ -270,10 +270,14 @@
 
   <profiles>
     <!--
-      Release profile for Maven Central publishing (via OSSRH):
+      Release profile for Maven Central publishing (via the Central Portal):
         mvn -Prelease clean deploy
-      Requires ~/.m2/settings.xml with an <id>ossrh</id> server entry (username/password)
-      and a GPG key configured (see .github/workflows/publish.yml for the CI equivalent).
+      Deploy the aggregator POM together with the modules — a `-pl` list of the modules alone
+      filters it out of the reactor, and no consumer can read a module POM whose parent is missing:
+        mvn -Prelease clean deploy -pl .,javaportico-annotations,javaportico-core,javaportico-maven-plugin,javaportico-runtime,javaportico-cli
+      Requires ~/.m2/settings.xml with a <server id="central"> user token (see
+      https://central.sonatype.com/usertoken) and a GPG key configured (see .github/workflows/publish.yml
+      for the CI equivalent).
     -->
     <profile>
       <id>release</id>

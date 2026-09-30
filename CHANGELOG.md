@@ -45,6 +45,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `UlidClientKeyValidator` decodes ULID timestamps correctly: `describe()` previously reported an
   issuance time ~256x too small (erroneous `>> 8` shift) and used an incorrect Crockford base32
   alphabet mapping for letters after `H`. `describe()` now returns the accurate `ulid:<instant>`.
+- **The parent POM is published with the artifacts.** Every module POM names
+  `io.github.mpcoredeveloper:javaportico-parent` as its parent, and a consumer resolving a module reads
+  that parent to build the module's effective model: while the parent was missing from the repository
+  neither `0.1.0` nor the first deployment of this version resolved anything — `Failed to read artifact
+  descriptor for io.github.mpcoredeveloper:javaportico-core:jar:0.1.1 ... Could not find artifact
+  io.github.mpcoredeveloper:javaportico-parent:pom:0.1.1`. A `-pl` list of the published modules filters
+  the aggregator out of the reactor, which is how the parent went missing; the publish workflow now leads
+  that list with `.`, and `javaportico-parent:0.1.1` itself was published by an additional `parent-only`
+  deployment of the same workflow, after which a fresh local repository resolves all five artifacts.
 
 ### Security
 
