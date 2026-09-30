@@ -2,6 +2,13 @@ name: Publish to Maven Central
 
 on:
   workflow_dispatch:
+    inputs:
+      parent-only:
+        description: >-
+          Repair run: publish only the aggregator POM (io.github.mpcoredeveloper:javaportico-parent).
+          Deploying the modules alone leaves a consumer unable to read their POMs.
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
@@ -25,11 +32,25 @@ jobs:
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
       # Publishes through the Central Portal (central.sonatype.com). Samples and tests are demo
-      # modules and must not be deployed, hence the explicit -pl reactor list.
+      # modules and must not be deployed, hence the explicit -pl reactor list. `.` is the aggregator
+      # POM itself (javaportico-parent): every module POM names it as its parent, so a consumer cannot
+      # read a module without it, and a -pl list of modules alone filters the aggregator out of the
+      # reactor. (Check with: mvn -B dependency:resolve against a module from a clean local repo.)
       - name: Build and publish
+        if: ${{ inputs.parent-only != true }}
         run: >-
           mvn -B -ntp clean deploy -Prelease -DskipTests
-          -pl javaportico-annotations,javaportico-core,javaportico-maven-plugin,javaportico-runtime,javaportico-cli
+          -pl .,javaportico-annotations,javaportico-core,javaportico-maven-plugin,javaportico-runtime,javaportico-cli
+        env:
+          MAVEN_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      # Repair path for a release whose deploy already happened without the aggregator POM: a new
+      # deployment for the same version is accepted while it adds paths that do not exist yet.
+      - name: Publish the parent POM only
+        if: ${{ inputs.parent-only == true }}
+        run: mvn -B -ntp -N deploy -Prelease -DskipTests
         env:
           MAVEN_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
