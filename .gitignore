@@ -16,3 +16,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Python (used by the BMAD framework scripts under _bmad/ and .agents/skills/)
+__pycache__/
+*.py[cod]
+.pytest_cache/
