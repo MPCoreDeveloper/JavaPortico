@@ -6,6 +6,7 @@ import io.github.mpcoredeveloper.javaportico.model.EnumValueModel;
 import io.github.mpcoredeveloper.javaportico.model.FieldKind;
 import io.github.mpcoredeveloper.javaportico.model.FieldModel;
 import io.github.mpcoredeveloper.javaportico.model.MessageModel;
+import io.github.mpcoredeveloper.javaportico.model.WellKnownTypes;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static io.github.mpcoredeveloper.javaportico.mapping.NameSanitizer.refId;
 import static io.github.mpcoredeveloper.javaportico.mapping.NameSanitizer.sanitizeEnumName;
@@ -35,6 +37,7 @@ public final class SchemaMapper {
     private final OpenAPI document;
     private final LinkedHashMap<String, MessageModel> messages = new LinkedHashMap<>();
     private final LinkedHashMap<String, EnumModel> enums = new LinkedHashMap<>();
+    private final List<EnumConflict> enumConflicts = new ArrayList<>();
 
     public SchemaMapper(OpenAPI document) {
         this.document = document;
@@ -50,26 +53,96 @@ public final class SchemaMapper {
         return List.copyOf(enums.values());
     }
 
+    /**
+     * The enumerations that collided: one generated name, two member sets.
+     *
+     * @return the collisions found so far, in the order they were discovered
+     */
+    public List<EnumConflict> enumConflicts() {
+        return List.copyOf(enumConflicts);
+    }
+
+    /**
+     * One generated enumeration name declared twice with different members.
+     *
+     * @param name     the generated enumeration name
+     * @param existing the members already registered under that name
+     * @param declared the members the second declaration carries
+     */
+    public record EnumConflict(String name, String existing, String declared) {
+    }
+
     /** True when the schema declares enum values. */
     public boolean isEnum(Schema<?> schema) {
         return schema != null && schema.getEnum() != null && !schema.getEnum().isEmpty();
     }
 
-    /** Maps an enum schema to an {@link EnumModel} and registers it (first wins). */
+    /**
+     * Maps an enum schema to an {@link EnumModel} and registers it.
+     *
+     * <p>An enumeration's identity is its generated name <em>and</em> its members. Two inline
+     * enumerations that declare the same members are one type and are shared, which is what a contract
+     * expects when the same vocabulary appears in several schemas. Two that declare different members
+     * under one name become two types: the first keeps the name the property implies and the second is
+     * named after its members, because the contract never named it and its members are exactly what
+     * make it a different type. Only a second declaration that collides even with that derived name is
+     * recorded as a conflict (see {@link #enumConflicts()}).
+     * </p>
+     *
+     * @param name   the name to register the enumeration under
+     * @param schema the schema declaring the members
+     * @return the registered enumeration model: the existing one when the members match, otherwise the
+     *         distinct one
+     */
     public EnumModel mapEnum(String name, Schema<?> schema) {
-        if (enums.containsKey(name)) return enums.get(name);
+        String key = sanitizePascal(name);
+        List<EnumValueModel> declared = readEnumValues(key, schema);
 
+        EnumModel existing = enums.get(key);
+        if (existing == null) {
+            EnumModel model = new EnumModel(key, declared);
+            enums.put(key, model);
+            return model;
+        }
+
+        String declaredMembers = enumMemberNames(declared);
+        if (enumMemberNames(existing.values()).equals(declaredMembers)) return existing;
+
+        // The contract declared a second enumeration under a name that is already taken, with different members. The
+        // name is derived from the members, because the contract never named this one and the members are what makes
+        // it a different type: a `state` whose only member is `purged` is not the artifact lifecycle, it is the
+        // answer to a purge.
+        String derived = key + declared.stream().map(EnumValueModel::name).collect(Collectors.joining());
+
+        EnumModel known = enums.get(derived);
+        if (known != null) {
+            if (enumMemberNames(known.values()).equals(declaredMembers)) return known;
+
+            enumConflicts.add(new EnumConflict(derived, enumMemberNames(known.values()), declaredMembers));
+            return known;
+        }
+
+        EnumModel distinct = new EnumModel(derived, declared);
+        enums.put(derived, distinct);
+        return distinct;
+    }
+
+    /** The member names of an enumeration, in declaration order, as one comparable string. */
+    private static String enumMemberNames(List<EnumValueModel> values) {
+        return String.join(", ", values.stream().map(EnumValueModel::name).toList());
+    }
+
+    /** Reads the members a schema declares. */
+    private static List<EnumValueModel> readEnumValues(String enumName, Schema<?> schema) {
         List<EnumValueModel> values = new ArrayList<>();
         int number = 0;
         if (schema.getEnum() != null) {
             for (Object value : schema.getEnum()) {
-                values.add(mapEnumValue(name, value, number));
+                values.add(mapEnumValue(enumName, value, number));
                 number++;
             }
         }
-        EnumModel model = new EnumModel(sanitizePascal(name), values);
-        enums.put(name, model);
-        return model;
+        return values;
     }
 
     /** Converts one raw enum entry into an {@link EnumValueModel}, enforcing the int32 proto range. */
@@ -238,6 +311,12 @@ public final class SchemaMapper {
         if (schema.getEnum() != null && !schema.getEnum().isEmpty()) return mapInlineEnumField(name, schema, fieldNo, false);
         if ((schema.getProperties() != null && !schema.getProperties().isEmpty())
                 || SCHEMA_TYPE_OBJECT.equals(schema.getType())) {
+            // An object that declares no properties is a free-form object - "any JSON object" - and proto3 has a type
+            // for exactly that. Mapping it to a nested message produced a placeholder whose only member was
+            // `_HasValue`, which is not what the contract said and is not something a consumer can use.
+            if (schema.getProperties() == null || schema.getProperties().isEmpty()) {
+                return structField(name, fieldNo, false);
+            }
             return mapNestedMessageField(name, schema, fieldNo, false);
         }
         return mapScalarField(name, schema, fieldNo);
@@ -252,11 +331,19 @@ public final class SchemaMapper {
         return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0], kind, refName, refName, repeated);
     }
 
-    /** Maps an inline enum schema (registered by name) to an enum field. */
+    /**
+     * Maps an inline enum schema to an enum field, referencing the enumeration the members map to.
+     *
+     * <p>The name comes from the mapper rather than from the property: an inline enumeration that
+     * collides with one already registered is registered under a name derived from its members, and a
+     * field that named the property's name instead would reference the other enumeration - the members
+     * the contract did not declare.
+     * </p>
+     */
     private FieldModel mapInlineEnumField(String name, Schema<?> schema, int[] fieldNo, boolean repeated) {
-        String enumName = sanitizePascal(name) + "Enum";
-        mapEnum(enumName, schema);
-        return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0], FieldKind.ENUM, enumName, enumName, repeated);
+        EnumModel model = mapEnum(sanitizePascal(name) + "Enum", schema);
+        return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0],
+                FieldKind.ENUM, model.name(), model.name(), repeated);
     }
 
     /** Maps an inline object schema (registered by name) to a nested message field. */
@@ -278,6 +365,11 @@ public final class SchemaMapper {
         if (items.getEnum() != null && !items.getEnum().isEmpty()) return mapInlineEnumField(name, items, fieldNo, true);
         if ((items.getProperties() != null && !items.getProperties().isEmpty())
                 || SCHEMA_TYPE_OBJECT.equals(items.getType())) {
+            // The element of an array is a free-form object, or a nested message - the same distinction as a
+            // property's.
+            if (items.getProperties() == null || items.getProperties().isEmpty()) {
+                return structField(name, fieldNo, true);
+            }
             return mapNestedMessageField(name, items, fieldNo, true);
         }
         FieldModel scalar = mapScalarField(name, items, fieldNo);
@@ -291,6 +383,18 @@ public final class SchemaMapper {
     private FieldModel stringArrayField(String name, int[] fieldNo) {
         return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0],
                 FieldKind.STRING, JAVA_TYPE_STRING, JAVA_TYPE_STRING, true);
+    }
+
+    /**
+     * Maps a free-form object (any JSON object) to protobuf's own {@link WellKnownTypes#PROTO_STRUCT}.
+     *
+     * <p>The model carries the proto type name; the emitters translate it into the Java class protobuf
+     * compiles that type into ({@link WellKnownTypes#javaType(String)}).
+     * </p>
+     */
+    private static FieldModel structField(String name, int[] fieldNo, boolean repeated) {
+        return new FieldModel(sanitizePascal(name), toProtoName(name), name, ++fieldNo[0],
+                FieldKind.MESSAGE, WellKnownTypes.PROTO_STRUCT, WellKnownTypes.PROTO_STRUCT, repeated);
     }
 
     /** Maps an OpenAPI path/query/header parameter to a request field. */

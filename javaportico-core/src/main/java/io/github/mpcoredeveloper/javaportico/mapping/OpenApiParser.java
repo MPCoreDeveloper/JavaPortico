@@ -51,7 +51,10 @@ public final class OpenApiParser {
         }
         OpenAPI document = parsed.document();
         if (document.getInfo() == null) {
-            return ParseResult.failure(item, List.of("missing info/title section"));
+            // A document that comes back without an info section is a document the reader refused part of, and the
+            // reader already said which part - reporting the symptom instead ("missing info/title section") sends the
+            // caller looking at the one section that is almost always fine, while the reader's own message names it.
+            return ParseResult.failure(item, List.of(readerComplaint(parsed, "missing info/title section")));
         }
 
         String serviceName = deriveServiceName(item, document);
@@ -68,6 +71,14 @@ public final class OpenApiParser {
 
         // Map paths -> RPCs + request/response messages.
         List<RpcModel> rpcs = mapPathsToRpcs(document, item, schemaMapper, allMessages);
+
+        // Two enumerations behind one name is the same class of defect as two messages behind one name, and it is
+        // refused here for the same reason: the generated file would either not compile or quietly carry one
+        // lifecycle's members under the other's name, and the consumer would be reading generated source to find out
+        // which.
+        if (!schemaMapper.enumConflicts().isEmpty()) {
+            return ParseResult.failure(item, enumConflictDiagnostic(item, schemaMapper.enumConflicts().get(0)));
+        }
 
         // Auth schemes.
         List<AuthSchemeModel> authSchemes = List.of();
@@ -90,6 +101,41 @@ public final class OpenApiParser {
                 proxy);
 
         return ParseResult.success(item, model, new ArrayList<>());
+    }
+
+    /**
+     * The first complaint the reader itself made, or the fallback when it made none.
+     *
+     * <p>The OpenAPI reader reports recoverable errors while still returning a document, and a document
+     * in that state can be missing whole sections - which is exactly when the caller needs the reader's
+     * own words rather than the generator's. The reader messages are collected on the way in
+     * ({@link OpenApiParse.Parsed#messages()}), so that is where this reads them from.
+     * </p>
+     *
+     * @param parsed   the parse attempt
+     * @param fallback the text used when the reader said nothing
+     * @return the reader's complaint, or the fallback
+     */
+    private static String readerComplaint(OpenApiParse.Parsed parsed, String fallback) {
+        for (String message : parsed.messages()) {
+            if (message != null && !message.isBlank()) return message;
+        }
+        return fallback;
+    }
+
+    /**
+     * The refusal for a colliding enumeration, naming both member sets.
+     *
+     * @param item     the work item being mapped (the message names its file)
+     * @param conflict the collision
+     * @return the diagnostic text
+     */
+    private static String enumConflictDiagnostic(WorkItem item, SchemaMapper.EnumConflict conflict) {
+        return "cannot map '" + item.filePath() + "': the inline enumeration named '" + conflict.name()
+                + "' is declared twice with different members ('" + conflict.existing() + "' and '"
+                + conflict.declared() + "'). An inline enumeration is named after the property declaring it, so two "
+                + "schemas with a property of that name collide - declare one of them as a named schema under "
+                + "components";
     }
 
     /** Maps each component schema to an enum or message and registers it on the mapper. */

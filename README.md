@@ -56,7 +56,7 @@ JavaPortico/
 <plugin>
   <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-maven-plugin</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <executions>
     <execution>
       <goals><goal>generate</goal></goals>

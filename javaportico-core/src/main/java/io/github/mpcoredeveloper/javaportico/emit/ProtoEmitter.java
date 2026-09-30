@@ -10,15 +10,16 @@ import io.github.mpcoredeveloper.javaportico.model.MessageModel;
 import io.github.mpcoredeveloper.javaportico.model.RpcKind;
 import io.github.mpcoredeveloper.javaportico.model.RpcModel;
 import io.github.mpcoredeveloper.javaportico.model.ServiceModel;
+import io.github.mpcoredeveloper.javaportico.model.WellKnownTypes;
 
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Emits a proto3 descriptor for a {@link GrpcModel}. Ported from SharpPortico's ProtoEmitter.
  */
 public final class ProtoEmitter {
-
-    private static final String TIMESTAMP_IMPORT = "google/protobuf/timestamp.proto";
 
     private ProtoEmitter() {
     }
@@ -29,24 +30,49 @@ public final class ProtoEmitter {
         w.line();
         w.line("package " + model.protoPackage() + ";");
         w.line();
+        emitImports(w, model);
         w.line("option java_package = \"" + model.namespace() + "\";");
         w.line("option java_multiple_files = true;");
         w.line();
-        emitTimestampImport(w, model);
         emitEnums(w, model.enums());
         emitMessages(w, model.messages());
         emitServices(w, model.services());
         return w.toString();
     }
 
-    private static void emitTimestampImport(CodeWriter w, GrpcModel model) {
-        boolean needsTimestamp = model.messages().stream()
-                .flatMap(m -> m.fields().stream())
-                .anyMatch(f -> f.kind() == FieldKind.TIMESTAMP);
-        if (needsTimestamp) {
-            w.line("import \"" + TIMESTAMP_IMPORT + "\";");
-            w.line();
+    /** Emits the imports the model's fields require, alphabetically ordered and without duplicates. */
+    private static void emitImports(CodeWriter w, GrpcModel model) {
+        List<String> imports = requiredImports(model);
+        for (String path : imports) {
+            w.line("import \"" + path + "\";");
         }
+        if (!imports.isEmpty()) w.line();
+    }
+
+    /**
+     * The imports the model's fields require.
+     *
+     * <p>A field of a well-known type without the import that declares it produces a descriptor protoc
+     * refuses to compile, so the imports are derived from the model rather than assumed.
+     * </p>
+     */
+    private static List<String> requiredImports(GrpcModel model) {
+        SortedSet<String> imports = new TreeSet<>();
+        for (MessageModel msg : model.messages()) {
+            for (FieldModel f : msg.fields()) {
+                // A message field with no resolved type name is emitted as google.protobuf.Empty, so that is the type
+                // whose import it needs.
+                String referenced = switch (f.kind()) {
+                    case TIMESTAMP -> WellKnownTypes.PROTO_TIMESTAMP;
+                    case MESSAGE -> f.typeName() != null ? f.typeName() : WellKnownTypes.PROTO_EMPTY;
+                    default -> null;
+                };
+                if (referenced == null) continue;
+                String path = WellKnownTypes.protoImport(referenced);
+                if (path != null) imports.add(path);
+            }
+        }
+        return List.copyOf(imports);
     }
 
     private static void emitEnums(CodeWriter w, List<EnumModel> enums) {
@@ -100,8 +126,8 @@ public final class ProtoEmitter {
             case BOOL -> "bool";
             case BYTES -> "bytes";
             case ENUM -> f.typeName() != null ? f.typeName() : "int32";
-            case MESSAGE -> f.typeName() != null ? f.typeName() : "google.protobuf.Empty";
-            case TIMESTAMP -> "google.protobuf.Timestamp";
+            case MESSAGE -> f.typeName() != null ? f.typeName() : WellKnownTypes.PROTO_EMPTY;
+            case TIMESTAMP -> WellKnownTypes.PROTO_TIMESTAMP;
         };
     }
 }

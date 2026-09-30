@@ -36,7 +36,7 @@ Declare the spec in your `pom.xml`, then run protoc via `protobuf-maven-plugin`:
     <plugin>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-maven-plugin</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.1</version>
       <executions>
         <execution><goals><goal>generate</goal></goals></execution>
       </executions>
@@ -148,10 +148,39 @@ Server server = ServerBuilder.forPort(50053)
 | body | Nested message; `application/octet-stream` → `bytes` |
 | response | `*Response` message (+ google.rpc.Status-shaped error wrapper) |
 | components/schemas | `message` definitions (`$ref`, `allOf`, `oneOf`/`anyOf`) |
+| free-form object (`type: object`, no `properties`) | `google.protobuf.Struct` |
 | arrays | `repeated` |
 | enums | protobuf enums (proxy JSON parse is case-insensitive on raw values) |
+| well-known types | the descriptor imports the file that declares each one (`struct.proto`, `timestamp.proto`, …) |
 | auth | `AuthMetadata` helpers + Bearer/API-Key/OAuth2 client interceptors |
 | pagination | `page/limit/cursor/next_page_token` detection |
+
+### Free-form objects (`google.protobuf.Struct`)
+
+A property (or array element) declared `type: object` **without** `properties` is a free-form object - "any JSON
+object" - and maps to protobuf's own type for one, `google.protobuf.Struct`, with the descriptor carrying
+`import "google/protobuf/struct.proto";`.
+
+`Struct` is not a generated message, so there is no per-message reader or writer for it. The generated proxy
+converts it through protobuf's JSON printer/parser (`com.google.protobuf.util.JsonFormat` in
+`protobuf-java-util`, which `javaportico-runtime` already brings in) rather than through a
+`parse{Type}`/`serialize{Type}` pair.
+
+### Enum identity, and what is refused
+
+An inline enumeration is named after the property that declares it (`state` → `StateEnum`), and its identity is the
+name **and** the members:
+
+- two inline enumerations with the same members share one generated enum (the same vocabulary);
+- two with different members become two types - the second is named after its members
+  (`StateEnumOpenClosedExpired`) so each message references its own;
+- a member-derived name already taken by a different member set is **refused**: the run fails with both member sets
+  named, because the contract is the only place that can say which of the two the name means.
+
+A document the OpenAPI reader could not fully parse is refused too, carrying the reader's own message (not the
+generator's "missing info/title section", which names the section that is missing *because* of the reader's
+complaint). Nothing is written when a contract is refused - a compile error inside generated source is what that
+avoids.
 
 ---
 

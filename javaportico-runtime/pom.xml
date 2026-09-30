@@ -7,12 +7,12 @@
   <parent>
     <groupId>io.github.mpcoredeveloper</groupId>
     <artifactId>javaportico-parent</artifactId>
-    <version>0.1.1-SNAPSHOT</version>
+    <version>0.1.1</version>
   </parent>
 
   <groupId>io.github.mpcoredeveloper</groupId>
   <artifactId>javaportico-runtime</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
+  <version>0.1.1</version>
   <name>JavaPortico :: Runtime</name>
   <description>Proxy pipeline + auth helpers used by JavaPortico-generated gRPC proxies.</description>
   <url>https://github.com/MPCoreDeveloper/JavaPortico</url>
@@ -43,7 +43,7 @@
     <dependency>
       <groupId>io.github.mpcoredeveloper</groupId>
       <artifactId>javaportico-annotations</artifactId>
-      <version>0.1.1-SNAPSHOT</version>
+      <version>0.1.1</version>
     </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.22.2</version>
+      <version>2.22.3</version>
     </dependency>
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>

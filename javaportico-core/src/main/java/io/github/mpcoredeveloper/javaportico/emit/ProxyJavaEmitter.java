@@ -8,6 +8,7 @@ import io.github.mpcoredeveloper.javaportico.model.MessageModel;
 import io.github.mpcoredeveloper.javaportico.model.RpcKind;
 import io.github.mpcoredeveloper.javaportico.model.RpcModel;
 import io.github.mpcoredeveloper.javaportico.model.ServiceModel;
+import io.github.mpcoredeveloper.javaportico.model.WellKnownTypes;
 
 import java.util.List;
 
@@ -58,8 +59,61 @@ public final class ProxyJavaEmitter {
                 emitSerialize(w, msg);
                 emitParse(w, msg, model);
             }
+            emitStructHelpers(w, model);
         });
         return w.toString();
+    }
+
+    /**
+     * Emits the free-form JSON object helpers when a field references protobuf's own {@code Struct}.
+     *
+     * <p>{@code Struct} is not a generated message, so it has no per-message reader or writer. It is
+     * converted through protobuf's JSON printer/parser instead, which is what its JSON form is defined
+     * as.
+     * </p>
+     */
+    private static void emitStructHelpers(CodeWriter w, GrpcModel model) {
+        boolean used = model.messages().stream()
+                .flatMap(m -> m.fields().stream())
+                .anyMatch(ProxyJavaEmitter::isStruct);
+        if (!used) return;
+
+        w.block("private static JsonNode structToJson(com.google.protobuf.Struct value)", () -> {
+            w.block("try", () ->
+                    w.line("return JSON.readTree(com.google.protobuf.util.JsonFormat.printer().print(value));"));
+            w.line("catch (Exception ex) {");
+            w.openBlock();
+            w.line("throw new RuntimeException(ex);");
+            w.closeBlock();
+            w.line("}");
+        });
+        w.line();
+        w.block("private static com.google.protobuf.Struct parseStruct(JsonNode el)", () -> {
+            w.line("com.google.protobuf.Struct.Builder b = com.google.protobuf.Struct.newBuilder();");
+            w.block("try", () -> w.line("com.google.protobuf.util.JsonFormat.parser().merge(el.toString(), b);"));
+            w.line("catch (Exception ex) {");
+            w.openBlock();
+            w.line("throw new RuntimeException(ex);");
+            w.closeBlock();
+            w.line("}");
+            w.line("return b.build();");
+        });
+        w.line();
+    }
+
+    /** True when the field references protobuf's free-form JSON object type. */
+    private static boolean isStruct(FieldModel f) {
+        return f.kind() == FieldKind.MESSAGE && WellKnownTypes.PROTO_STRUCT.equals(f.typeName());
+    }
+
+    /** The expression that parses {@code expr} into the message type a field references. */
+    private static String parseExpr(FieldModel f, String expr) {
+        return isStruct(f) ? "parseStruct(" + expr + ")" : "parse" + f.typeName() + "(" + expr + ")";
+    }
+
+    /** The expression that serializes {@code expr} to JSON for the message type a field references. */
+    private static String serializeExpr(FieldModel f, String expr) {
+        return isStruct(f) ? "structToJson(" + expr + ")" : "serialize" + f.typeName() + "(" + expr + ")";
     }
 
     /** @return {@code request.getX()} style accessor for a request field. */
@@ -294,7 +348,7 @@ public final class ProxyJavaEmitter {
             if (bodyField != null) {
                 if (bodyField.kind() == FieldKind.MESSAGE) {
                     w.block("if (request.getBody() != null)", () -> {
-                        w.line("body = JSON.writeValueAsBytes(serialize" + bodyField.typeName() + "(request.getBody()));");
+                        w.line("body = JSON.writeValueAsBytes(" + serializeExpr(bodyField, "request.getBody()") + ");");
                     });
                 } else if (bodyField.kind() == FieldKind.BYTES) {
                     w.block("if (request.getBody() != null && !request.getBody().isEmpty())", () -> {
@@ -326,7 +380,7 @@ public final class ProxyJavaEmitter {
         String g = "msg.get" + f.name() + "()";
         switch (f.kind()) {
             case MESSAGE -> w.block("if (msg.has" + f.name() + "())", () ->
-                    w.line("o.set(" + key + ", serialize" + f.typeName() + "(" + g + "));"));
+                    w.line("o.set(" + key + ", " + serializeExpr(f, g) + ");"));
             case ENUM -> emitPut(w, key, "msg.get" + f.name() + "Value()");
             case STRING, BOOL, INT32, UINT32, INT64, UINT64, FLOAT, DOUBLE -> emitPut(w, key, g);
             case BYTES -> emitPut(w, key, "Base64.getEncoder().encodeToString(" + g + ".toByteArray())");
@@ -338,7 +392,7 @@ public final class ProxyJavaEmitter {
         // Repeated timestamps are not serialized (mirrors SharpPortico).
         if (f.kind() == FieldKind.TIMESTAMP) return;
         String itemType = switch (f.kind()) {
-            case MESSAGE, ENUM -> f.typeName();
+            case MESSAGE, ENUM -> WellKnownTypes.javaType(f.typeName());
             case STRING -> "String";
             case BOOL -> "boolean";
             case INT32, UINT32 -> "int";
@@ -348,7 +402,7 @@ public final class ProxyJavaEmitter {
             default -> "String";
         };
         String addExpr = switch (f.kind()) {
-            case MESSAGE -> "serialize" + f.typeName() + "(item)";
+            case MESSAGE -> serializeExpr(f, "item");
             case ENUM -> "item.getNumber()";
             case BYTES -> "Base64.getEncoder().encodeToString(item.toByteArray())";
             default -> "item";
@@ -403,11 +457,11 @@ public final class ProxyJavaEmitter {
             if (single.kind() == FieldKind.MESSAGE) {
                 if (single.repeated()) {
                     w.block("if (el.isArray())", () -> {
-                        w.line("for (JsonNode itemEl : el) b.add" + single.name() + "(parse" + single.typeName() + "(itemEl));");
+                        w.line("for (JsonNode itemEl : el) b.add" + single.name() + "(" + parseExpr(single, "itemEl") + ");");
                     });
                 } else {
                     w.block("if (el.isObject() && !b.has" + single.name() + "())", () -> {
-                        w.line("b.set" + single.name() + "(parse" + single.typeName() + "(el));");
+                        w.line("b.set" + single.name() + "(" + parseExpr(single, "el") + ");");
                     });
                 }
             }
@@ -478,9 +532,9 @@ public final class ProxyJavaEmitter {
     private static void emitMessageParse(CodeWriter w, String get, String set, String add, FieldModel f) {
         if (f.repeated()) {
             emitArrayParse(w, get, () ->
-                    w.line("for (JsonNode item : " + get + ") " + add + "(parse" + f.typeName() + "(item));"));
+                    w.line("for (JsonNode item : " + get + ") " + add + "(" + parseExpr(f, "item") + ");"));
         } else {
-            emitValueParse(w, get, () -> w.line(set + "(parse" + f.typeName() + "(" + get + "));"));
+            emitValueParse(w, get, () -> w.line(set + "(" + parseExpr(f, get) + ");"));
         }
     }
 
