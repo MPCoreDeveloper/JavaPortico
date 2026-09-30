@@ -8,6 +8,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A workflow cannot read `secrets` inside an `if` condition - GitHub only makes the `secrets`
+    # context available in a few places, and an unavailable context in `if` rejects the whole
+    # workflow file ("This run likely failed because of a workflow file issue") before any job
+    # starts. Lift the token into the job's env and let the step test that instead.
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -25,7 +31,5 @@ jobs:
         run: mvn -B -ntp clean verify
 
       - name: SonarCloud analysis
-        if: ${{ secrets.SONAR_TOKEN != '' }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        if: ${{ env.SONAR_TOKEN != '' }}
         run: mvn -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar -Dsonar.token=$SONAR_TOKEN

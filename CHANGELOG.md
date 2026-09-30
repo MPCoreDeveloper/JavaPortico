@@ -103,6 +103,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   `org.sonatype.central:central-publishing-maven-plugin` (0.11.0) — `mvn -Prelease deploy` uploads
   and publishes via `central.sonatype.com` using a user token; `samples/*` and `tests/*` are
   excluded from deployment.
+- CI runs again. The SonarCloud step tested `secrets.SONAR_TOKEN` inside a step `if`, and GitHub does
+  not make the `secrets` context available there: it rejects the whole workflow file, so every push to
+  `main` failed before a job started ("This run likely failed because of a workflow file issue"). The
+  token now reaches the step through job-level `env`, and the step gates on `env.SONAR_TOKEN != ''`.
 
 ### Notes
 
