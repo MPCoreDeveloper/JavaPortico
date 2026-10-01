@@ -54,6 +54,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   the aggregator out of the reactor, which is how the parent went missing; the publish workflow now leads
   that list with `.`, and `javaportico-parent:0.1.1` itself was published by an additional `parent-only`
   deployment of the same workflow, after which a fresh local repository resolves all five artifacts.
+  `javaportico-parent:0.1.0` was published the same way, from a branch cut at the `v0.1.0` tag, so the
+  earlier version resolves again as well.
 
 ### Security
 
@@ -129,3 +131,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Cloud Readiness findings from the scan (Azure Container Apps migration, localhost URLs, local file
   I/O in the CLI/plugin, no Dockerfile) were rejected as not applicable to this library / its demo
   samples or as false positives (e.g., "restricted configurations", "Jakarta EE version").
+- A red `parent-only` repair run does not necessarily mean the deployment failed: the Central Portal can
+  publish after the plugin stopped waiting for it. The `0.1.0` aggregator POM was uploaded at 04:32 UTC,
+  the plugin's 30-minute poll timed out, and the Portal published minutes later - `javaportico-parent:0.1.0`
+  is on Central and a clean local repository resolves the `0.1.0` modules. Check *Publishing -> Deployments*
+  on `central.sonatype.com` before re-running a repair, because a second run uploads a second deployment of
+  the same paths.

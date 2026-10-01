@@ -48,6 +48,11 @@ jobs:
 
       # Repair path for a release whose deploy already happened without the aggregator POM: a new
       # deployment for the same version is accepted while it adds paths that do not exist yet.
+      # This step waits for the deployment to be published and fails the run when the Portal has not
+      # finished inside that window. The upload has already succeeded at that point and the Portal can
+      # still publish afterwards, so check Publishing -> Deployments on central.sonatype.com and the
+      # archive on repo1.maven.org before re-running: a second run uploads a second deployment of the
+      # same paths.
       - name: Publish the parent POM only
         if: ${{ inputs.parent-only == true }}
         run: mvn -B -ntp -N deploy -Prelease -DskipTests
